@@ -1,4 +1,4 @@
 <?php
 use Illuminate\Support\Facades\Route;
-// GUI demo only. No authentication or backend mutations are implemented here.
+// Landing page GUI demo.
 Route::view('/', 'eco.app')->name('eco.home');
