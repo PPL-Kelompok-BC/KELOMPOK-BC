@@ -1,5 +1,8 @@
 @extends('layouts.auth')
 @section('title', 'Dashboard')
+@section('nav')
+<form method="POST" action="{{ route('logout') }}">@csrf<button class="btn" type="submit">Keluar</button></form>
+@endsection
 @section('content')
 <section class="auth-card panel">
 <div class="eyebrow">DASHBOARD MAHASISWA</div>
