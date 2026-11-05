@@ -10,6 +10,10 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    public const ROLE_MAHASISWA = 'mahasiswa';
+
+    public const ROLE_ADMIN = 'admin';
+
     protected $fillable = [
         'name',
         'username',
