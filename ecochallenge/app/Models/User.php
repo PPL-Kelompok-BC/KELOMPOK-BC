@@ -29,6 +29,17 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    /** Halaman awal setelah masuk, sesuai peran. */
+    public static function homeRouteFor(self $user): string
+    {
+        return route($user->isAdmin() ? 'admin.dashboard' : 'dashboard');
+    }
+
     protected function casts(): array
     {
         return [
