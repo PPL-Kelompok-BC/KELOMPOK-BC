@@ -44,20 +44,22 @@ class ProfileTest extends DuskTestCase
             $browser->loginAs($user)
                 ->visitRoute('profile.show')
                 ->click('@edit-profile')
-                ->assertRouteIs('profile.edit')
+                ->waitForRoute('profile.edit')
+                ->waitFor('@name')
                 ->clear('@name')->type('@name', 'Rani Lestari')
                 ->clear('@username')->type('@username', 'rani.lestari')
                 ->press('@save-profile')
-                ->assertRouteIs('profile.show')
-                ->assertSeeIn('@profile-status', 'Profil berhasil diperbarui.')
+                ->waitForRoute('profile.show')
+                ->waitForTextIn('@profile-status', 'Profil berhasil diperbarui.')
                 ->assertSeeIn('@profile-name', 'Rani Lestari')
                 ->assertSeeIn('@profile-username', '@rani.lestari');
 
             $browser->visitRoute('profile.edit')
+                ->waitFor('@username')
                 ->clear('@username')->type('@username', 'sudah.dipakai')
                 ->press('@save-profile')
-                ->assertRouteIs('profile.edit')
-                ->assertSee('Username sudah dipakai. Pilih username lain.');
+                ->waitForText('Username sudah dipakai. Pilih username lain.')
+                ->assertRouteIs('profile.edit');
         });
     }
 
@@ -72,15 +74,15 @@ class ProfileTest extends DuskTestCase
                 ->visitRoute('profile.edit')
                 ->attach('@photo', $photo->getRealPath())
                 ->press('@save-photo')
-                ->assertRouteIs('profile.show')
-                ->assertSeeIn('@profile-status', 'Foto profil berhasil diperbarui.')
+                ->waitForRoute('profile.show', [], 10)
+                ->waitForTextIn('@profile-status', 'Foto profil berhasil diperbarui.')
                 ->assertPresent('@profile-photo');
 
             $browser->visitRoute('profile.edit')
                 ->attach('@photo', $document->getRealPath())
                 ->press('@save-photo')
+                ->waitForText('Foto harus berformat JPG atau PNG.')
                 ->assertRouteIs('profile.edit')
-                ->assertSee('Foto harus berformat JPG atau PNG.')
                 ->assertPresent('@profile-photo');
         });
     }
