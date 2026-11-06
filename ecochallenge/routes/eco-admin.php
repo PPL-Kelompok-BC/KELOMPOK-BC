@@ -1,10 +1,9 @@
-
 <?php
 
 use App\Http\Controllers\AdminChallengeController;
 use Illuminate\Support\Facades\Route;
 
-// PBI-08 dan PBI-09: Pengelolaan challenge oleh admin.
+// PBI-08, PBI-09, dan PBI-11: Pengelolaan challenge oleh admin.
 Route::middleware('auth')->group(function () {
 
     // PBI-08: Menampilkan daftar challenge.
@@ -18,5 +17,13 @@ Route::middleware('auth')->group(function () {
     // PBI-09: Menyimpan challenge baru.
     Route::post('/admin/challenges', [AdminChallengeController::class, 'store'])
         ->name('admin.challenges.store');
+
+    // PBI-11: Menonaktifkan challenge.
+    Route::post('/admin/challenges/{challenge}/deactivate', [AdminChallengeController::class, 'deactivate'])
+        ->name('admin.challenges.deactivate');
+
+    // PBI-11: Mengaktifkan kembali challenge.
+    Route::post('/admin/challenges/{challenge}/activate', [AdminChallengeController::class, 'activate'])
+        ->name('admin.challenges.activate');
 
 });
