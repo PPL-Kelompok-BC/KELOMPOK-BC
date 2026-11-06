@@ -11,7 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
+
+        // Pengguna yang sudah masuk diarahkan ke halaman sesuai perannya.
+        $middleware->redirectUsersTo(fn () => \App\Models\User::homeRouteFor(auth()->user()));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
