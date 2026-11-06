@@ -161,4 +161,46 @@ class AdminChallengeController extends Controller
             ->route('admin.challenges.index')
             ->with('success', 'Challenge berhasil ditambahkan.');
     }
+
+    /**
+     * PBI-11: Menonaktifkan challenge.
+     */
+    public function deactivate(Challenge $challenge): RedirectResponse
+    {
+        // Memastikan hanya admin yang dapat menonaktifkan challenge.
+        abort_unless(
+            auth()->user()?->role === 'admin',
+            403
+        );
+
+        // Mengubah status challenge menjadi nonaktif.
+        $challenge->update([
+            'is_active' => false,
+        ]);
+
+        return redirect()
+            ->route('admin.challenges.index')
+            ->with('success', 'Challenge berhasil dinonaktifkan.');
+    }
+
+    /**
+     * PBI-11: Mengaktifkan kembali challenge.
+     */
+    public function activate(Challenge $challenge): RedirectResponse
+    {
+        // Memastikan hanya admin yang dapat mengaktifkan challenge.
+        abort_unless(
+            auth()->user()?->role === 'admin',
+            403
+        );
+
+        // Mengubah status challenge menjadi aktif.
+        $challenge->update([
+            'is_active' => true,
+        ]);
+
+        return redirect()
+            ->route('admin.challenges.index')
+            ->with('success', 'Challenge berhasil diaktifkan kembali.');
+    }
 }
