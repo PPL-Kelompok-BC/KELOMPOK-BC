@@ -1,4 +1,3 @@
-
 @extends('layouts.eco')
 
 @section('title', 'Kelola Challenge')
@@ -78,6 +77,7 @@
                         <th class="px-4 py-3">Poin</th>
                         <th class="px-4 py-3">Estimasi Emisi</th>
                         <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Aksi</th>
                     </tr>
                 </thead>
 
@@ -118,6 +118,16 @@
                                         Nonaktif
                                     </span>
                                 @endif
+                            </td>
+
+                            {{-- PBI-10: Tombol edit challenge --}}
+                            <td class="px-4 py-3">
+                                <a
+                                    href="{{ route('admin.challenges.edit', $challenge) }}"
+                                    class="inline-block rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-200"
+                                >
+                                    Edit
+                                </a>
                             </td>
                         </tr>
                     @endforeach
