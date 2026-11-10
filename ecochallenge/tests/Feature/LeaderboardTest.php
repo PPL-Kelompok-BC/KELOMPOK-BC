@@ -30,11 +30,11 @@ class LeaderboardTest extends TestCase
         ], $extra));
     }
 
-    /** @return list<string> username sesuai urutan baris tabel */
+    /** @return list<string> username sesuai urutan baris (podium lalu daftar) */
     private function usernamesInOrder(string $html): array
     {
-        // Sel username selalu diawali huruf; sel peringkat dan poin hanya berisi angka.
-        preg_match_all('/<td class="px-4 py-3">\s*([a-z][a-z0-9_.]*)\s*(?:<span|<\/td>)/', $html, $m);
+        // Setiap baris peringkat membawa atribut data-username.
+        preg_match_all('/<li[^>]*\sdata-row\s[^>]*data-username="([^"]+)"/', $html, $m);
 
         return $m[1];
     }
@@ -89,9 +89,11 @@ class LeaderboardTest extends TestCase
 
     public function test_menampilkan_username_bukan_nama_asli(): void
     {
-        $user = $this->mhs('pengguna.satu', 10, ['name' => 'Budi Santoso Rahasia']);
+        $this->mhs('pengguna.satu', 10, ['name' => 'Budi Santoso Rahasia']);
+        $pengamat = $this->mhs('pengamat', 5, ['name' => 'Pengamat Biasa']);
 
-        $this->actingAs($user)->get('/leaderboard')
+        // Nama asli peserta lain tidak boleh bocor; hanya username yang tampil di papan.
+        $this->actingAs($pengamat)->get('/leaderboard')
             ->assertOk()
             ->assertSee('pengguna.satu')
             ->assertDontSee('Budi Santoso Rahasia');
@@ -112,7 +114,7 @@ class LeaderboardTest extends TestCase
 
         $response = $this->actingAs($saya)->get('/leaderboard')->assertOk();
 
-        $response->assertSee('data-me="true"', false)->assertSee('· kamu', false)->assertSee('#2');
+        $response->assertSee('data-me="true"', false)->assertSee('KAMU', false)->assertSee('POSISI KAMU')->assertSee('#2');
         $this->assertSame(1, substr_count($response->getContent(), 'data-me="true"'));
     }
 

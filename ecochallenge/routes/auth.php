@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -16,13 +17,9 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     // Dashboard mahasiswa; admin diarahkan ke dashboard admin.
-    Route::get('dashboard', function () {
-        return auth()->user()->isAdmin()
-            ? redirect()->route('admin.dashboard')
-            : view('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::view('/', 'admin.dashboard')->name('admin.dashboard');
+        Route::get('/', [DashboardController::class, 'admin'])->name('admin.dashboard');
     });
 });

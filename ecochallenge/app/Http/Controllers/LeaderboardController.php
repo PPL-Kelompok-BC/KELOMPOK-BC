@@ -21,11 +21,19 @@ class LeaderboardController extends Controller
             ? ['rank' => $myRank, 'id' => $user->id, 'username' => $user->username, 'total_points' => (int) $user->total_points]
             : null;
 
+        // Selisih poin ke peringkat di atasnya (hanya bila baris itu ada di daftar teratas).
+        $gap = null;
+        if ($myRank !== null && $myRank > 1) {
+            $above = collect($rows)->firstWhere('rank', $myRank - 1);
+            $gap = $above ? max(0, $above['total_points'] - (int) $user->total_points) : null;
+        }
+
         return view('leaderboard.index', [
             'rows' => $rows,
             'myRow' => $myRow,
             'myId' => $user->id,
             'myRank' => $myRank,
+            'gap' => $gap,
             'limit' => LeaderboardService::TOP_LIMIT,
         ]);
     }

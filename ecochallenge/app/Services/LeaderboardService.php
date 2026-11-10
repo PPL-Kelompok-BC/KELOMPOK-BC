@@ -84,6 +84,12 @@ class LeaderboardService
         }
     }
 
+    /** Jumlah mahasiswa aktif yang ikut peringkat. */
+    public function participantCount(): int
+    {
+        return $this->rankedQuery()->count();
+    }
+
     public function isRanked(User $user): bool
     {
         return $user->role === User::ROLE_MAHASISWA && (bool) $user->is_active;
