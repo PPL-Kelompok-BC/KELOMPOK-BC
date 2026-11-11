@@ -5,12 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Challenge extends Model
 {
     protected $fillable = [
-        'category_id', 'created_by', 'title', 'description', 'difficulty',
-        'points', 'is_active', 'proof_criteria', 'estimated_co2e_gram', 'emission_source',
+        'category_id',
+        'created_by',
+        'title',
+        'description',
+        'difficulty',
+        'points',
+        'is_active',
+        'proof_criteria',
+        'estimated_co2e_gram',
+        'emission_source',
     ];
 
     protected $casts = [
@@ -24,7 +33,17 @@ class Challenge extends Model
         return $this->belongsTo(Category::class);
     }
 
-    /** Hanya challenge aktif yang tampil bagi mahasiswa (PBI-12, PBI-11). */
+    /**
+     * Mengambil seluruh klaim yang dimiliki challenge.
+     */
+    public function claims(): HasMany
+    {
+        return $this->hasMany(Claim::class);
+    }
+
+    /**
+     * Hanya challenge aktif yang tampil bagi mahasiswa.
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);

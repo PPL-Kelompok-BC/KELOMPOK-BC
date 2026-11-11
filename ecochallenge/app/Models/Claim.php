@@ -14,9 +14,20 @@ class Claim extends Model
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
-        'user_id', 'challenge_id', 'proof_path', 'photo_hash', 'photo_taken_at',
-        'needs_review', 'claim_date', 'status', 'points_awarded', 'co2e_awarded_gram',
-        'reviewed_by', 'reviewed_at', 'cancel_reason', 'note',
+        'user_id',
+        'challenge_id',
+        'proof_path',
+        'photo_hash',
+        'photo_taken_at',
+        'needs_review',
+        'claim_date',
+        'status',
+        'points_awarded',
+        'co2e_awarded_gram',
+        'reviewed_by',
+        'reviewed_at',
+        'cancel_reason',
+        'note',
     ];
 
     protected function casts(): array
