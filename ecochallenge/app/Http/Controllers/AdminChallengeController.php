@@ -15,21 +15,17 @@ class AdminChallengeController extends Controller
      */
     public function index(Request $request): View
     {
-        // Memastikan hanya admin yang dapat mengakses halaman.
         abort_unless(
             auth()->user()?->role === 'admin',
             403
         );
 
-        // Mengambil status filter dari URL.
         $status = $request->query('status', 'all');
 
-        // Memastikan pilihan filter valid.
         if (! in_array($status, ['all', 'active', 'inactive'], true)) {
             $status = 'all';
         }
 
-        // Mengambil challenge beserta kategori.
         $challenges = Challenge::with('category')
             ->when($status === 'active', function ($query) {
                 $query->where('is_active', true);
@@ -56,7 +52,6 @@ class AdminChallengeController extends Controller
             403
         );
 
-        // Mengambil kategori yang masih aktif.
         $categories = Category::where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -74,7 +69,6 @@ class AdminChallengeController extends Controller
             403
         );
 
-        // Validasi seluruh input formulir.
         $validated = $request->validate([
             'category_id' => [
                 'required',
@@ -133,7 +127,6 @@ class AdminChallengeController extends Controller
             'emission_source.required' => 'Sumber emisi wajib diisi.',
         ]);
 
-        // Menyimpan challenge baru ke database.
         Challenge::create([
             ...$validated,
             'created_by' => auth()->id(),
@@ -155,7 +148,6 @@ class AdminChallengeController extends Controller
             403
         );
 
-        // Mengambil kategori aktif dan kategori challenge saat ini.
         $categories = Category::where('is_active', true)
             ->orWhere('id', $challenge->category_id)
             ->orderBy('name')
@@ -177,7 +169,6 @@ class AdminChallengeController extends Controller
             403
         );
 
-        // Validasi data yang dikirim dari formulir edit.
         $validated = $request->validate([
             'category_id' => [
                 'required',
@@ -233,12 +224,49 @@ class AdminChallengeController extends Controller
             'emission_source.required' => 'Sumber emisi wajib diisi.',
         ]);
 
-        // Hanya memperbarui data challenge.
         // Poin klaim yang sudah tersimpan tidak ikut berubah.
         $challenge->update($validated);
 
         return redirect()
             ->route('admin.challenges.index')
             ->with('success', 'Challenge berhasil diperbarui.');
+    }
+
+    /**
+     * PBI-11: Menonaktifkan challenge.
+     */
+    public function deactivate(Challenge $challenge): RedirectResponse
+    {
+        abort_unless(
+            auth()->user()?->role === 'admin',
+            403
+        );
+
+        $challenge->update([
+            'is_active' => false,
+        ]);
+
+        return redirect()
+            ->route('admin.challenges.index')
+            ->with('success', 'Challenge berhasil dinonaktifkan.');
+    }
+
+    /**
+     * PBI-11: Mengaktifkan kembali challenge.
+     */
+    public function activate(Challenge $challenge): RedirectResponse
+    {
+        abort_unless(
+            auth()->user()?->role === 'admin',
+            403
+        );
+
+        $challenge->update([
+            'is_active' => true,
+        ]);
+
+        return redirect()
+            ->route('admin.challenges.index')
+            ->with('success', 'Challenge berhasil diaktifkan kembali.');
     }
 }

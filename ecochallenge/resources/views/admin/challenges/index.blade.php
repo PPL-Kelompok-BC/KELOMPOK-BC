@@ -108,6 +108,7 @@
                                 {{ number_format($challenge->estimated_co2e_gram) }} g CO2e
                             </td>
 
+                            {{-- Status challenge --}}
                             <td class="px-4 py-3">
                                 @if ($challenge->is_active)
                                     <span class="inline-block rounded-full bg-green-100 text-green-800 px-3 py-1 text-xs font-semibold">
@@ -120,14 +121,52 @@
                                 @endif
                             </td>
 
-                            {{-- PBI-10: Tombol edit challenge --}}
+                            {{-- PBI-10 dan PBI-11: Aksi challenge --}}
                             <td class="px-4 py-3">
-                                <a
-                                    href="{{ route('admin.challenges.edit', $challenge) }}"
-                                    class="inline-block rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-200"
-                                >
-                                    Edit
-                                </a>
+                                <div class="flex flex-wrap items-center gap-2">
+
+                                    {{-- PBI-10: Edit challenge --}}
+                                    <a
+                                        href="{{ route('admin.challenges.edit', $challenge) }}"
+                                        class="inline-block rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-200"
+                                    >
+                                        Edit
+                                    </a>
+
+                                    {{-- PBI-11: Aktifkan atau nonaktifkan challenge --}}
+                                    @if ($challenge->is_active)
+                                        <form
+                                            action="{{ route('admin.challenges.deactivate', $challenge) }}"
+                                            method="POST"
+                                            onsubmit="return confirm('Apakah Anda yakin ingin menonaktifkan challenge ini?')"
+                                        >
+                                            @csrf
+
+                                            <button
+                                                type="submit"
+                                                class="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700"
+                                            >
+                                                Nonaktifkan
+                                            </button>
+                                        </form>
+                                    @else
+                                        <form
+                                            action="{{ route('admin.challenges.activate', $challenge) }}"
+                                            method="POST"
+                                            onsubmit="return confirm('Apakah Anda yakin ingin mengaktifkan kembali challenge ini?')"
+                                        >
+                                            @csrf
+
+                                            <button
+                                                type="submit"
+                                                class="rounded-lg bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800"
+                                            >
+                                                Aktifkan
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                </div>
                             </td>
                         </tr>
                     @endforeach
