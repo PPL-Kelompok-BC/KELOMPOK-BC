@@ -99,4 +99,62 @@ class AdminCategoryBrowserTest extends DuskTestCase
                 ->assertSee('Nama kategori sudah terdaftar.');
         });
     }
+
+    public function test_admin_dapat_mengubah_dan_menghapus_kategori_yang_belum_dipakai(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin EcoChallenge',
+            'username' => 'admin',
+            'email' => 'admin@ecochallenge.test',
+            'password' => bcrypt('Admin123!'),
+            'role' => 'admin',
+            'is_active' => true,
+            'total_points' => 0,
+        ]);
+
+        $kategoriDipakai = Category::create([
+            'name' => 'Transportasi',
+            'description' => 'Transportasi ramah lingkungan',
+            'is_active' => true,
+        ]);
+
+        Challenge::create([
+            'category_id' => $kategoriDipakai->id,
+            'created_by' => $admin->id,
+            'title' => 'Naik Sepeda',
+            'description' => 'Bersepeda ke kampus',
+            'difficulty' => 'mudah',
+            'points' => 20,
+            'is_active' => true,
+            'proof_criteria' => 'Foto sepeda',
+            'estimated_co2e_gram' => 400,
+            'emission_source' => 'Estimasi kendaraan',
+        ]);
+
+        $kategoriKosong = Category::create([
+            'name' => 'Kategori Sementara',
+            'description' => 'Deskripsi awal',
+            'is_active' => true,
+        ]);
+
+        $this->browse(function (Browser $browser) use ($admin, $kategoriKosong) {
+            $browser->loginAs($admin)
+                ->visit('/admin/categories')
+                ->assertPresent('button[disabled]')
+                ->click('button[data-id="' . $kategoriKosong->id . '"]')
+                ->whenAvailable('#editCategoryModal', function (Browser $modal) {
+                    $modal->clear('#edit_name')
+                        ->type('#edit_name', 'Kategori Baru')
+                        ->clear('#edit_description')
+                        ->type('#edit_description', 'Deskripsi diperbarui')
+                        ->press('Simpan Perubahan');
+                })
+                ->waitForText('Kategori berhasil diperbarui.')
+                ->assertSee('Kategori Baru')
+                ->click('form[action$="/admin/categories/' . $kategoriKosong->id . '"] button[type="submit"]')
+                ->acceptDialog()
+                ->waitForText('Kategori berhasil dihapus.')
+                ->assertDontSee('Kategori Baru');
+        });
+    }
 }

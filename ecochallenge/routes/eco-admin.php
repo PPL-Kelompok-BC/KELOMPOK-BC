@@ -15,6 +15,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/categories', [AdminCategoryController::class, 'store'])
         ->name('admin.categories.store');
 
+        // PBI-07: Mengubah kategori (Update)
+    Route::put('/admin/categories/{category}', [AdminCategoryController::class, 'update'])
+        ->name('admin.categories.update');
+
+    // PBI-07: Menghapus kategori (Destroy) dengan proteksi jika masih ada challenge
+    Route::delete('/admin/categories/{category}', [AdminCategoryController::class, 'destroy'])
+        ->name('admin.categories.destroy');
+
     // PBI-08: Menampilkan daftar challenge.
     Route::get('/admin/challenges', [AdminChallengeController::class, 'index'])
         ->name('admin.challenges.index');
