@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -19,5 +20,30 @@ class AdminCategoryController extends Controller
             ->get();
 
         return view('admin.categories.index', compact('categories'));
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        if ($request->user()?->role !== 'admin') {
+            abort(403, 'Akses ditolak. Halaman ini hanya untuk Admin.');
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100', 'unique:categories,name'],
+            'description' => ['nullable', 'string', 'max:255'],
+        ], [
+            'name.required' => 'Nama kategori wajib diisi.',
+            'name.unique' => 'Nama kategori sudah terdaftar.',
+            'name.max' => 'Nama kategori maksimal 100 karakter.',
+        ]);
+
+        Category::create([
+            'name' => trim($validated['name']),
+            'description' => $validated['description'] ?? null,
+            'is_active' => true,
+        ]);
+
+        return redirect('/admin/categories')
+            ->with('success', 'Kategori baru berhasil ditambahkan.');
     }
 }

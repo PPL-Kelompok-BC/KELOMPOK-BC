@@ -75,4 +75,83 @@ class AdminCategoryTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_admin_dapat_menambahkan_kategori_baru(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin EcoChallenge',
+            'username' => 'admin',
+            'email' => 'admin@ecochallenge.test',
+            'password' => bcrypt('Admin123!'),
+            'role' => 'admin',
+            'is_active' => true,
+            'total_points' => 0,
+        ]);
+
+        $response = $this->actingAs($admin)->post('/admin/categories', [
+            'name' => 'Konservasi Air',
+            'description' => 'Aktivitas menghemat penggunaan air',
+        ]);
+
+        $response->assertRedirect('/admin/categories');
+        $response->assertSessionHas('success', 'Kategori baru berhasil ditambahkan.');
+        $this->assertDatabaseHas('categories', [
+            'name' => 'Konservasi Air',
+            'description' => 'Aktivitas menghemat penggunaan air',
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_tambah_kategori_gagal_jika_nama_kosong_atau_duplikat(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin EcoChallenge',
+            'username' => 'admin',
+            'email' => 'admin@ecochallenge.test',
+            'password' => bcrypt('Admin123!'),
+            'role' => 'admin',
+            'is_active' => true,
+            'total_points' => 0,
+        ]);
+
+        Category::create([
+            'name' => 'Energi',
+            'description' => 'Aktivitas menghemat energi',
+            'is_active' => true,
+        ]);
+
+        $responseKosong = $this->actingAs($admin)->post('/admin/categories', [
+            'name' => '',
+            'description' => 'Tanpa nama',
+        ]);
+        $responseKosong->assertSessionHasErrors('name');
+
+        $responseDuplikat = $this->actingAs($admin)->post('/admin/categories', [
+            'name' => 'Energi',
+            'description' => 'Duplikat energi',
+        ]);
+        $responseDuplikat->assertSessionHasErrors('name');
+    }
+
+    public function test_mahasiswa_tidak_dapat_menambahkan_kategori_dan_menerima_403(): void
+    {
+        $mahasiswa = User::create([
+            'name' => 'Seto Satrio',
+            'username' => 'seto.satrio',
+            'email' => 'setosatrio@student.telkomuniversity.ac.id',
+            'password' => bcrypt('Mahasiswa123!'),
+            'role' => 'mahasiswa',
+            'is_active' => true,
+            'total_points' => 0,
+        ]);
+
+        $response = $this->actingAs($mahasiswa)->post('/admin/categories', [
+            'name' => 'Kategori Ilegal',
+        ]);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('categories', [
+            'name' => 'Kategori Ilegal',
+        ]);
+    }
 }

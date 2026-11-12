@@ -11,6 +11,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/categories', [AdminCategoryController::class, 'index'])
         ->name('admin.categories.index');
 
+       // PBI-06: Menambah kategori challenge baru.
+    Route::post('/admin/categories', [AdminCategoryController::class, 'store'])
+        ->name('admin.categories.store');
+
     // PBI-08: Menampilkan daftar challenge.
     Route::get('/admin/challenges', [AdminChallengeController::class, 'index'])
         ->name('admin.challenges.index');

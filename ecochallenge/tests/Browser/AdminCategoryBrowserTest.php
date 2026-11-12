@@ -56,9 +56,9 @@ class AdminCategoryBrowserTest extends DuskTestCase
     public function test_mahasiswa_membuka_url_kelola_kategori_menerima_403(): void
     {
         $mahasiswa = User::create([
-            'name' => 'Seto Satrio',
-            'username' => 'seto.satrio',
-            'email' => 'setosatrio@student.telkomuniversity.ac.id',
+            'name' => 'Mahasiswa Uji',
+            'username' => 'mahasiswa.uji',
+            'email' => 'mahasiswa@ecochallenge.test',
             'password' => bcrypt('Mahasiswa123!'),
             'role' => 'mahasiswa',
             'is_active' => true,
@@ -69,6 +69,34 @@ class AdminCategoryBrowserTest extends DuskTestCase
             $browser->loginAs($mahasiswa)
                 ->visit('/admin/categories')
                 ->assertSee('403');
+        });
+    }
+
+    public function test_admin_dapat_menambah_kategori_baru_dan_melihat_validasi(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin EcoChallenge',
+            'username' => 'admin',
+            'email' => 'admin@ecochallenge.test',
+            'password' => bcrypt('Admin123!'),
+            'role' => 'admin',
+            'is_active' => true,
+            'total_points' => 0,
+        ]);
+
+        $this->browse(function (Browser $browser) use ($admin) {
+            $browser->loginAs($admin)
+                ->visit('/admin/categories')
+                ->press('+ Tambah Kategori')
+                ->assertSee('Nama kategori wajib diisi.')
+                ->type('name', 'Konservasi Air')
+                ->type('description', 'Aktivitas menghemat air')
+                ->press('+ Tambah Kategori')
+                ->assertSee('Kategori baru berhasil ditambahkan.')
+                ->assertSee('Konservasi Air')
+                ->type('name', 'Konservasi Air')
+                ->press('+ Tambah Kategori')
+                ->assertSee('Nama kategori sudah terdaftar.');
         });
     }
 }
