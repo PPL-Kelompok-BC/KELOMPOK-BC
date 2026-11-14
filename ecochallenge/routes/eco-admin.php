@@ -1,10 +1,27 @@
 <?php
 
+use App\Http\Controllers\AdminCategoryController;
 use App\Http\Controllers\AdminChallengeController;
 use Illuminate\Support\Facades\Route;
 
 // PBI-08, PBI-09, PBI-10, dan PBI-11: Pengelolaan challenge oleh admin.
 Route::middleware('auth')->group(function () {
+
+    // PBI-05: Menampilkan daftar kategori challenge.
+    Route::get('/admin/categories', [AdminCategoryController::class, 'index'])
+        ->name('admin.categories.index');
+
+       // PBI-06: Menambah kategori challenge baru.
+    Route::post('/admin/categories', [AdminCategoryController::class, 'store'])
+        ->name('admin.categories.store');
+
+        // PBI-07: Mengubah kategori (Update)
+    Route::put('/admin/categories/{category}', [AdminCategoryController::class, 'update'])
+        ->name('admin.categories.update');
+
+    // PBI-07: Menghapus kategori (Destroy) dengan proteksi jika masih ada challenge
+    Route::delete('/admin/categories/{category}', [AdminCategoryController::class, 'destroy'])
+        ->name('admin.categories.destroy');
 
     // PBI-08: Menampilkan daftar challenge.
     Route::get('/admin/challenges', [AdminChallengeController::class, 'index'])
