@@ -1,4 +1,5 @@
-@extends('layouts.eco')
+
+@extends('layouts.admin')
 
 @section('title', 'Kelola Challenge')
 
