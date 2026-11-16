@@ -6,6 +6,7 @@
 @php
     $user = auth()->user();
     $tiles = collect([
+        ['label' => 'Kelola kategori', 'desc' => 'Tambah, ubah, dan hapus kategori challenge.', 'icon' => 'clipboard-list', 'route' => 'admin.categories.index'],
         ['label' => 'Kelola challenge', 'desc' => 'Lihat, filter, dan atur status challenge.', 'icon' => 'list-checks', 'route' => 'admin.challenges.index'],
         ['label' => 'Tambah challenge', 'desc' => 'Buat challenge baru lengkap dengan kriteria bukti.', 'icon' => 'plus', 'route' => 'admin.challenges.create'],
         ['label' => 'Tinjau klaim', 'desc' => 'Setujui atau batalkan bukti dari mahasiswa.', 'icon' => 'badge-check', 'route' => 'admin.claims.index'],
