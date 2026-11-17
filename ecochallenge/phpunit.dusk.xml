@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Konfigurasi khusus Dusk (tes browser): php artisan dusk
+
+  - Suite "Browser"  : tes Dusk bawaan tim di ecochallenge/tests/Browser
+  - Suite "Fitur"    : SEMUA tes otomatis di KELOMPOK-BC/automated-testing/tests
+  - Suite per anggota: Jonathan, Fakhrezi, Najmi, Alexander, Hafidz, Seto
+                       (nama folder = nama assignee di Jira)
+  Kelas-kelas di automated-testing dimuat oleh automated-testing/bootstrap.php
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="../automated-testing/bootstrap.php"
+         colors="true"
+         failOnWarning="false">
+    <testsuites>
+        <testsuite name="Browser">
+            <directory suffix="Test.php">./tests/Browser</directory>
+        </testsuite>
+        <testsuite name="Fitur">
+            <directory suffix="Test.php">../automated-testing/tests</directory>
+        </testsuite>
+        <testsuite name="Jonathan">
+            <directory suffix="Test.php">../automated-testing/tests/Jonathan</directory>
+        </testsuite>
+        <testsuite name="Fakhrezi">
+            <directory suffix="Test.php">../automated-testing/tests/Fakhrezi</directory>
+        </testsuite>
+        <testsuite name="Najmi">
+            <directory suffix="Test.php">../automated-testing/tests/Najmi</directory>
+        </testsuite>
+        <testsuite name="Alexander">
+            <directory suffix="Test.php">../automated-testing/tests/Alexander</directory>
+        </testsuite>
+        <testsuite name="Hafidz">
+            <directory suffix="Test.php">../automated-testing/tests/Hafidz</directory>
+        </testsuite>
+        <testsuite name="Seto">
+            <directory suffix="Test.php">../automated-testing/tests/Seto</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
