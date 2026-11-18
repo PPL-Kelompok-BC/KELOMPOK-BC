@@ -82,7 +82,15 @@ php artisan dusk:chrome-driver --detect
 Perintah ini mengunduh driver ke `vendor\laravel\dusk\bin` (sekali saja; ulangi bila Chrome
 diperbarui ke versi utama baru).
 
-### 3. Buat konfigurasi tes yang terpisah dari data aslimu
+### 3. Konfigurasi tes (hanya untuk cara B / perintah manual)
+
+**Kalau memakai `jalankan.ps1` (cara A), langkah ini tidak perlu.** Skrip itu menyalakan server
+tes sendiri di port 8001 dengan basis data `database\dusk.sqlite` (dibuat otomatis), memaksa
+`APP_URL`, `DB_CONNECTION`, dan `DB_DATABASE` lewat variabel lingkungan, lalu mengembalikan
+semuanya seperti semula. Jadi tes tidak tersesat ke Apache/XAMPP (`http://localhost`, 404) atau ke
+MySQL, walaupun `.env` di laptopmu memakai MySQL. Langsung ke langkah 4.
+
+Untuk cara B, buat berkas konfigurasi tes sekali saja:
 
 ```powershell
 Copy-Item .env .env.dusk.local
@@ -118,8 +126,9 @@ Ada dua cara. Keduanya membuka browser yang terlihat.
 
 ### A. Memakai skrip pembantu (paling mudah)
 
-Skrip ini menyalakan server di port 8000 bila belum menyala, menjalankan tes, lalu mematikan
-server yang ia nyalakan sendiri. Jalankan dari folder `automated-testing`:
+Skrip ini menyalakan server tes khusus di port 8001 (terpisah dari server pengembanganmu di port
+8000), menjalankan tes, lalu mematikannya lagi. Tidak perlu `.env.dusk.local`. Jalankan dari
+folder `automated-testing`:
 
 ```powershell
 cd KELOMPOK-BC\automated-testing
@@ -203,7 +212,12 @@ tidak tersentuh.
 
 - Dusk menyimpan tangkapan layar kegagalan di `ecochallenge\tests\Browser\screenshots\` dan log
   konsol browser di `ecochallenge\tests\Browser\console\`.
-- `Connection refused` atau halaman tidak terbuka: server belum menyala di port 8000.
+- `Waited 5 seconds for text [Masuk.]`, browser membuka `localhost/login` dengan judul "404 Not
+  Found", atau error `SQLSTATE ... mysql ... 3306`: tes tersesat ke Apache/XAMPP atau MySQL.
+  Pakai `jalankan.ps1` versi terbaru (`git pull`), yang memaksa server tes di port 8001 dan SQLite.
+  Untuk perintah manual, jalankan `php artisan config:clear` dan periksa `.env.dusk.local`.
+- `Port 8001 sudah dipakai`: tutup program yang memakainya atau jalankan dengan `-Port 8002`.
+- `Connection refused` pada perintah manual: server belum menyala di port 8000 (Terminal 1).
 - `session not created ... version`: versi chromedriver tidak cocok dengan Chrome. Jalankan lagi
   `php artisan dusk:chrome-driver --detect`.
 - Tes foto profil dilewati (skipped) bila ekstensi PHP **GD** belum aktif. Aktifkan `extension=gd`
