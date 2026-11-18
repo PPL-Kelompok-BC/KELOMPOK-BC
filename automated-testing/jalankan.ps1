@@ -48,6 +48,7 @@ if (-not (Test-Path $dbTes)) { New-Item -ItemType File -Force $dbTes | Out-Null 
 # Variabel lingkungan untuk proses tes DAN server tes. Nilai ini mengalahkan isi .env /
 # .env.dusk.local, jadi tes selalu memakai SQLite dan port yang benar di laptop mana pun.
 $nilai = @{
+    'APP_ENV'                = 'local'   # rute bantu Dusk (/_dusk/login, /_dusk/logout) hanya aktif di luar production
     'APP_URL'                = "http://127.0.0.1:$Port"
     'DB_CONNECTION'          = 'sqlite'
     'DB_DATABASE'            = $dbTes
@@ -69,7 +70,10 @@ $ErrorActionPreference = 'Continue'
 php artisan config:clear 2>$null | Out-Null
 
 # Tentukan sasaran: satu berkas, satu anggota, atau semuanya.
-$argumen = @('artisan', 'dusk')
+# PHPUnit dijalankan LANGSUNG dengan phpunit.dusk.xml, bukan lewat "php artisan dusk". Perintah itu
+# menukar .env dengan .env.dusk.local lalu memuatnya ulang secara mutable, sehingga variabel di
+# atas tertimpa (tes tersesat ke MySQL atau http://localhost bila laptop punya .env.dusk.local lama).
+$argumen = @('vendor/phpunit/phpunit/phpunit', '--configuration', 'phpunit.dusk.xml', '--testdox', '--colors=always')
 if ($Berkas -ne '') {
     $nama = $Berkas -replace '\.php$', ''
     $ketemu = Get-ChildItem (Join-Path $akar 'tests') -Recurse -Filter "$nama.php" | Select-Object -First 1

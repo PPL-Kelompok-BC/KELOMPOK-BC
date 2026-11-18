@@ -127,8 +127,9 @@ Ada dua cara. Keduanya membuka browser yang terlihat.
 ### A. Memakai skrip pembantu (paling mudah)
 
 Skrip ini menyalakan server tes khusus di port 8001 (terpisah dari server pengembanganmu di port
-8000), menjalankan tes, lalu mematikannya lagi. Tidak perlu `.env.dusk.local`. Jalankan dari
-folder `automated-testing`:
+8000), menjalankan PHPUnit langsung dengan `phpunit.dusk.xml`, lalu mematikan servernya lagi.
+`.env.dusk.local` tidak dipakai sama sekali (berkas lama di laptopmu tidak mengganggu), dan
+`.env` tidak ditukar. Jalankan dari folder `automated-testing`:
 
 ```powershell
 cd KELOMPOK-BC\automated-testing
