@@ -102,7 +102,10 @@ try {
     }
 
     Write-Host "Menyalakan server tes di http://127.0.0.1:$Port (basis data: database\dusk.sqlite) ..." -ForegroundColor Cyan
-    $server = Start-Process php -ArgumentList '-S', "127.0.0.1:$Port", '-t', '"public"', "`"$router`"" -WorkingDirectory $app -PassThru -WindowStyle Hidden
+    # Router Laravel mencari index.php di folder kerja, jadi server dijalankan DARI folder public
+    # dengan path lengkap (aman untuk path yang mengandung spasi, mis. "E:\DATA C\...").
+    $publik = Join-Path $app 'public'
+    $server = Start-Process php -ArgumentList '-S', "127.0.0.1:$Port", '-t', "`"$publik`"", "`"$router`"" -WorkingDirectory $publik -PassThru -WindowStyle Hidden
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep 1
         try { if ((Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -WarningAction SilentlyContinue).TcpTestSucceeded) { break } } catch {}
