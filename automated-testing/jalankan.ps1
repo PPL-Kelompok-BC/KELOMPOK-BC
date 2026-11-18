@@ -90,7 +90,8 @@ if ($Berkas -ne '') {
 if ($Filter -ne '') { $argumen += "--filter=$Filter" }
 
 # Server tes khusus (php -S langsung, agar variabel lingkungan di atas ikut terbawa).
-$router = Join-Path $app 'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
+# Router sendiri (automated-testing\router.php) yang menunjuk ke ecochallenge\public dengan path tetap.
+$router = Join-Path $akar 'router.php'
 $server = $null
 $kode = 1
 try {
