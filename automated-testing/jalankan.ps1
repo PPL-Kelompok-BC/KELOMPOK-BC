@@ -106,7 +106,10 @@ try {
     # Router Laravel mencari index.php di folder kerja, jadi server dijalankan DARI folder public
     # dengan path lengkap (aman untuk path yang mengandung spasi, mis. "E:\DATA C\...").
     $publik = Join-Path $app 'public'
-    $server = Start-Process php -ArgumentList '-S', "127.0.0.1:$Port", '-t', "`"$publik`"", "`"$router`"" -WorkingDirectory $publik -PassThru -WindowStyle Hidden
+    # display_errors=0: di PHP 8.4+ peringatan "PDO::MYSQL_ATTR_SSL_CA is deprecated" dari
+    # config/database.php bisa tercetak ke halaman sebelum header, sehingga cookie sesi gagal
+    # terkirim dan login di tes tidak pernah berhasil. Peringatan tetap dicatat Laravel ke log.
+    $server = Start-Process php -ArgumentList '-d', 'display_errors=0', '-d', 'display_startup_errors=0', '-S', "127.0.0.1:$Port", '-t', "`"$publik`"", "`"$router`"" -WorkingDirectory $publik -PassThru -WindowStyle Hidden
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep 1
         try { if ((Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -WarningAction SilentlyContinue).TcpTestSucceeded) { break } } catch {}
