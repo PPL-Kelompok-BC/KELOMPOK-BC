@@ -23,6 +23,20 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
+     * Mode demo (DUSK_SIMPAN_DATA=true, dipakai "jalankan.ps1 -SimpanData"): data hasil tes tidak
+     * di-rollback setelah tes selesai, sehingga bisa diperiksa di phpMyAdmin. Basis data tetap
+     * dikosongkan (migrate:fresh) di AWAL setiap tes, jadi yang tersisa adalah data tes terakhir.
+     */
+    public function artisan($command, $parameters = [])
+    {
+        if ($command === 'migrate:rollback' && filter_var(env('DUSK_SIMPAN_DATA', false), FILTER_VALIDATE_BOOL)) {
+            return 0;
+        }
+
+        return parent::artisan($command, $parameters);
+    }
+
+    /**
      * Create the RemoteWebDriver instance.
      */
     protected function driver(): RemoteWebDriver

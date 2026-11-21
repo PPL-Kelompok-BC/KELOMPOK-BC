@@ -9,6 +9,9 @@
   .\jalankan.ps1 -Berkas Jonathan_PBI04_LoginTest -Filter test_admin_masuk   # satu tes saja
   .\jalankan.ps1 -Anggota Alexander -Jeda 1500     # lebih pelan agar mudah ditonton
   .\jalankan.ps1 -TanpaTampil                      # tanpa jendela browser (headless)
+  .\jalankan.ps1 -Berkas LeaderboardBrowserTest -Filter test_pbi19 -MySQL -SimpanData
+                                                   # pakai MySQL XAMPP (basis data ecochallenge_dusk)
+                                                   # dan data tes TIDAK dihapus, bisa dilihat di phpMyAdmin
 
 Anggota: Jonathan, Fakhrezi, Najmi, Alexander, Hafidz, Seto
 
@@ -23,7 +26,13 @@ param(
     [string]$Filter = '',
     [int]$Jeda = 700,
     [int]$Port = 8001,
-    [switch]$TanpaTampil
+    [switch]$TanpaTampil,
+    [switch]$MySQL,                       # pakai MySQL (XAMPP) alih-alih SQLite
+    [switch]$SimpanData,                  # data tes terakhir tidak dihapus (untuk diperiksa)
+    [string]$NamaDb = 'ecochallenge_dusk',
+    [int]$PortDb = 0,                     # 0 = deteksi otomatis (3306, lalu 3307)
+    [string]$UserDb = 'root',
+    [string]$SandiDb = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,17 +50,50 @@ if (-not (Test-Path (Join-Path $app 'phpunit.dusk.xml'))) {
 
 Push-Location $app
 
-# Basis data khusus tes (dikosongkan tiap tes oleh Dusk).
+# Basis data khusus tes (dikosongkan di awal tiap tes oleh Dusk).
 $dbTes = Join-Path $app 'database\dusk.sqlite'
-if (-not (Test-Path $dbTes)) { New-Item -ItemType File -Force $dbTes | Out-Null }
+if (-not $MySQL -and -not (Test-Path $dbTes)) { New-Item -ItemType File -Force $dbTes | Out-Null }
+
+if ($MySQL) {
+    # XAMPP biasanya memakai 3306, tetapi bisa 3307 bila 3306 sudah dipakai program lain.
+    $kandidat = $(if ($PortDb -gt 0) { @($PortDb) } else { @(3306, 3307) })
+    $PortDb = 0
+    foreach ($pt in $kandidat) {
+        $buka = $false
+        try { $buka = (Test-NetConnection -ComputerName 127.0.0.1 -Port $pt -WarningAction SilentlyContinue).TcpTestSucceeded } catch {}
+        if ($buka) { $PortDb = $pt; break }
+    }
+    if ($PortDb -eq 0) {
+        Write-Host 'MySQL belum menyala. Buka XAMPP Control Panel lalu Start MySQL, kemudian ulangi.' -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+    # Buat basis data khusus tes bila belum ada (basis data aplikasi aslimu tidak disentuh).
+    $buat = "try { `$p = new PDO('mysql:host=127.0.0.1;port=$PortDb', '$UserDb', '$SandiDb'); `$p->exec('CREATE DATABASE IF NOT EXISTS ``$NamaDb`` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'); echo 'ok'; } catch (Throwable `$e) { echo `$e->getMessage(); exit(1); }"
+    # Peringatan PHP di stderr (mis. "exif already loaded") jangan dianggap error PowerShell.
+    $ErrorActionPreference = 'Continue'
+    $hasil = php -r $buat 2>$null
+    $ErrorActionPreference = 'Stop'
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Gagal membuat basis data MySQL '$NamaDb': $hasil" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+    Write-Host "Basis data MySQL: $NamaDb di port $PortDb (lihat di http://localhost/phpmyadmin)" -ForegroundColor Cyan
+}
 
 # Variabel lingkungan untuk proses tes DAN server tes. Nilai ini mengalahkan isi .env /
 # .env.dusk.local, jadi tes selalu memakai SQLite dan port yang benar di laptop mana pun.
 $nilai = @{
     'APP_ENV'                = 'local'   # rute bantu Dusk (/_dusk/login, /_dusk/logout) hanya aktif di luar production
     'APP_URL'                = "http://127.0.0.1:$Port"
-    'DB_CONNECTION'          = 'sqlite'
-    'DB_DATABASE'            = $dbTes
+    'DB_CONNECTION'          = $(if ($MySQL) { 'mysql' } else { 'sqlite' })
+    'DB_HOST'                = '127.0.0.1'
+    'DB_PORT'                = $(if ($MySQL) { "$PortDb" } else { '3306' })
+    'DB_DATABASE'            = $(if ($MySQL) { $NamaDb } else { $dbTes })
+    'DB_USERNAME'            = $UserDb
+    'DB_PASSWORD'            = $SandiDb
+    'DUSK_SIMPAN_DATA'       = $(if ($SimpanData) { 'true' } else { 'false' })
     'SESSION_DRIVER'         = 'file'
     'CACHE_STORE'            = 'file'
     'QUEUE_CONNECTION'       = 'sync'
@@ -106,7 +148,8 @@ try {
         exit 1
     }
 
-    Write-Host "Menyalakan server tes di http://127.0.0.1:$Port (basis data: database\dusk.sqlite) ..." -ForegroundColor Cyan
+    $labelDb = $(if ($MySQL) { "MySQL $NamaDb" } else { 'database\dusk.sqlite' })
+    Write-Host "Menyalakan server tes di http://127.0.0.1:$Port (basis data: $labelDb) ..." -ForegroundColor Cyan
     # Router Laravel mencari index.php di folder kerja, jadi server dijalankan DARI folder public
     # dengan path lengkap (aman untuk path yang mengandung spasi, mis. "E:\DATA C\...").
     $publik = Join-Path $app 'public'
@@ -121,6 +164,9 @@ try {
 
     & php @argumen
     $kode = $LASTEXITCODE
+    if ($SimpanData) {
+        Write-Host "Data tes terakhir disimpan di $labelDb. Tabel yang menarik: users (total_points), claims (status, points_awarded, co2e_awarded_gram), streaks." -ForegroundColor Cyan
+    }
 }
 finally {
     if ($server) { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }

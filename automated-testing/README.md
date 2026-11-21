@@ -186,6 +186,23 @@ php artisan dusk ../automated-testing/tests/Seto/Seto_PBI05_PBI07_KelolaKategori
 php artisan dusk ../automated-testing/tests/Jonathan/Jonathan_PBI04_LoginTest.php --filter=test_admin_masuk_ke_dashboard_admin
 ```
 
+## Melihat data hasil tes di phpMyAdmin (MySQL)
+
+Secara bawaan tes memakai SQLite (`ecochallenge/database/dusk.sqlite`) dan datanya dikosongkan
+lagi setelah tiap tes. Untuk memeriksa data yang dibuat tes di phpMyAdmin:
+
+1. Buka XAMPP Control Panel, **Start MySQL** (dan Apache untuk phpMyAdmin).
+2. Jalankan tes dengan `-MySQL -SimpanData`, misalnya:
+   ```powershell
+   .\jalankan.ps1 -Berkas LeaderboardBrowserTest -Filter test_pbi22 -MySQL -SimpanData
+   ```
+3. Buka `http://localhost/phpmyadmin`, pilih basis data **ecochallenge_dusk** (dibuat otomatis).
+
+- `-MySQL` memakai basis data khusus tes `ecochallenge_dusk` (ganti dengan `-NamaDb`, akun dengan
+  `-UserDb`/`-SandiDb`; bawaan XAMPP `root` tanpa sandi). Basis data aplikasi aslimu tidak disentuh.
+- `-SimpanData` membuat data **tes terakhir** tidak dihapus. Setiap tes tetap mengosongkan basis data
+  di awal, jadi jalankan satu tes (`-Filter`) bila ingin melihat datanya.
+
 ## Mengatur kecepatan dan tampilan
 
 | Pengaturan | Cara | Keterangan |
