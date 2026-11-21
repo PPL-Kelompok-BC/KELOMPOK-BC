@@ -10,7 +10,7 @@ use Tests\DuskTestCase;
 
 /**
  * PBI-03 · Jonathan – Registrasi akun mahasiswa (SCRUM-23).
- * Test case Jira TC-01 s.d. TC-04 (Laravel Dusk).
+ * Test case Jira TC-01 s.d. TC-04 (Laravel Dusk), mengikuti UC-01 Registrasi Akun di proposal.
  */
 class RegistrasiBrowserTest extends DuskTestCase
 {
@@ -56,6 +56,9 @@ class RegistrasiBrowserTest extends DuskTestCase
         $this->assertTrue((bool) $user->is_active);
         $this->assertNotSame(self::KATA_SANDI, $user->password, 'Kata sandi harus tersimpan dalam bentuk hash.');
         $this->assertTrue(Hash::check(self::KATA_SANDI, $user->password));
+
+        // UC-01 langkah 5: baris streak awal bernilai 0 ikut dibuat.
+        $this->assertDatabaseHas('streaks', ['user_id' => $user->id, 'current_streak' => 0, 'longest_streak' => 0]);
     }
 
     /** TC-02 Eksepsi: email yang sudah dipakai ditolak dengan pesan di samping isian email. */
@@ -68,7 +71,12 @@ class RegistrasiBrowserTest extends DuskTestCase
                 ->press('Daftar')
                 ->waitFor('#email-error')
                 ->assertSeeIn('#email-error', 'Email sudah terdaftar. Gunakan email lain atau masuk.')
-                ->assertPathIs('/register');
+                ->assertPathIs('/register')
+                // UC-01 alur 4a: isian lain tetap terisi kecuali kata sandi.
+                ->assertInputValue('name', 'Rani Hijau')
+                ->assertInputValue('username', 'rani.baru')
+                ->assertInputValue('email', 'rani@student.telkomuniversity.ac.id')
+                ->assertInputValue('password', '');
         });
 
         $this->assertDatabaseMissing('users', ['username' => 'rani.baru']);

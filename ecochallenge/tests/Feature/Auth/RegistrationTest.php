@@ -47,6 +47,46 @@ class RegistrationTest extends TestCase
         $this->get(route('dashboard'))->assertOk()->assertSee('Jonathan Sharron');
     }
 
+    /** UC-01 langkah 5: registrasi membuat baris streak awal bernilai 0. */
+    public function test_registrasi_membuat_baris_streak_awal_bernilai_nol(): void
+    {
+        $this->post('/register', $this->payload());
+
+        $user = User::where('username', 'jonathan.s')->firstOrFail();
+        $this->assertDatabaseHas('streaks', [
+            'user_id' => $user->id,
+            'current_streak' => 0,
+            'longest_streak' => 0,
+            'last_active_date' => null,
+        ]);
+    }
+
+    /** Batasan PBI-03: registrasi tidak bisa membuat akun Admin (admin hanya dari seeder). */
+    public function test_registrasi_tidak_bisa_membuat_akun_admin_walau_peran_dikirim(): void
+    {
+        $this->post('/register', $this->payload(['role' => 'admin', 'is_active' => false]))
+            ->assertRedirect(route('dashboard'));
+
+        $user = User::where('username', 'jonathan.s')->firstOrFail();
+        $this->assertSame(User::ROLE_MAHASISWA, $user->role);
+        $this->assertTrue((bool) $user->is_active);
+        $this->get('/admin')->assertForbidden();
+    }
+
+    /** UC-01 alur 4a: isian lain tetap terisi kecuali kata sandi. */
+    public function test_isian_lain_tetap_terisi_kecuali_kata_sandi_saat_ditolak(): void
+    {
+        User::factory()->create(['username' => 'lain', 'email' => 'jonathan@example.com']);
+
+        $this->from('/register')->post('/register', $this->payload(['username' => 'baru']))
+            ->assertSessionHasInput('name', 'Jonathan Sharron')
+            ->assertSessionHasInput('username', 'baru')
+            ->assertSessionHasInput('email', 'jonathan@example.com')
+            ->assertSessionMissing('_old_input.password');
+
+        $this->assertDatabaseCount('streaks', 0);
+    }
+
     public function test_email_yang_sudah_dipakai_ditolak_dengan_pesan(): void
     {
         User::factory()->create(['username' => 'lain', 'email' => 'jonathan@example.com']);

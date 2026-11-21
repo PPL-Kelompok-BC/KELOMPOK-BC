@@ -36,9 +36,8 @@ class Jonathan_PBI03_PBI04_KasusEksepsiJiraTest extends FiturTestCase
     }
 
     /**
-     * PBI-03 TC-01 (bagian streak): Jira meminta baris streak awal bernilai 0 dibuat saat registrasi.
-     * TEMUAN: RegisteredUserController belum membuatnya; fitur streak baru dikerjakan di PBI-26
-     * (Sprint berikutnya). Tes ini dilewati sampai baris itu dibuat, lalu otomatis menjadi pengecekan.
+     * PBI-03 TC-01 (bagian streak): sesuai UC-01 langkah 5 di proposal, registrasi membuat baris
+     * streak awal bernilai 0 bersamaan dengan akun.
      */
     public function test_pbi03_tc01_baris_streak_awal_nol_dibuat_saat_registrasi(): void
     {
@@ -52,13 +51,11 @@ class Jonathan_PBI03_PBI04_KasusEksepsiJiraTest extends FiturTestCase
         });
 
         $user = User::where('username', 'rani.streak')->firstOrFail();
-        $baris = Schema::hasTable('streaks') ? DB::table('streaks')->where('user_id', $user->id)->first() : null;
+        $baris = DB::table('streaks')->where('user_id', $user->id)->first();
 
-        if ($baris === null) {
-            $this->markTestSkipped('Temuan: baris streak awal belum dibuat saat registrasi (Jira PBI-03 TC-01; fitur streak = PBI-26).');
-        }
-
+        $this->assertNotNull($baris, 'Baris streak awal harus dibuat saat registrasi (UC-01 langkah 5).');
         $this->assertSame(0, (int) $baris->current_streak);
+        $this->assertSame(0, (int) $baris->longest_streak);
     }
 
     /** PBI-03 TC-04: kata sandi 5 karakter ditolak. */
@@ -116,9 +113,8 @@ class Jonathan_PBI03_PBI04_KasusEksepsiJiraTest extends FiturTestCase
 
         $this->browse(function (Browser $browser) use ($user) {
             $this->masuk($browser, $user);
-            // Catatan: Jira menulis "Akun Anda dinonaktifkan, hubungi admin"; aplikasi memakai
-            // "Akun ini dinonaktifkan. Hubungi admin." (lihat bagian Temuan di README).
-            $browser->waitForText('dinonaktifkan')->assertSee('Hubungi admin')->assertPathIs('/login');
+            // Pesan sesuai UC-02 alur 2c di proposal.
+            $browser->waitForText('dinonaktifkan')->assertSee('Akun Anda dinonaktifkan, hubungi admin')->assertPathIs('/login');
             $this->jeda($browser, 1200);
         });
     }
