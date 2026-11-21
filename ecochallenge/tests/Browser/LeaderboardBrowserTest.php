@@ -6,22 +6,33 @@ use App\Models\Category;
 use App\Models\Challenge;
 use App\Models\Claim;
 use App\Models\User;
-use App\Services\ClaimService;
 use App\Services\LeaderboardService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 /**
- * PBI-19 s.d. PBI-22 · Jonathan – Poin dan leaderboard (SCRUM-31 s.d. SCRUM-34).
+ * PBI-19 · Jonathan – Poin otomatis saat klaim diterima (SCRUM-31, TC-19-xx) dan
+ * PBI-20 · Jonathan – Leaderboard total poin, posisi sendiri, dan pembaruan maks. 2 detik
+ * (SCRUM-32, TC-20-xx; gabungan PBI-20, PBI-21/SCRUM-33, dan PBI-22/SCRUM-34).
  *
- * Kartu Jira belum memuat test case, jadi acuannya kriteria penerimaan di proposal (Tabel PBI).
+ * Poin bertambah lewat alur sungguhan di web: admin membuka Tinjau Klaim lalu menekan Setujui,
+ * dan mahasiswa melihat total poin serta leaderboard berubah dari basis data.
  * Skenario eksepsi yang tidak bisa dipicu dari browser (penyimpanan klaim gagal, cache gagal)
  * diuji di tests/Feature/ClaimPointsTest.php dan tests/Feature/LeaderboardTest.php.
  */
 class LeaderboardBrowserTest extends DuskTestCase
 {
     use DatabaseMigrations;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Cache leaderboard (umur 2 detik) dari tes sebelumnya jangan sampai terbawa.
+        Cache::flush();
+    }
 
     private function mahasiswa(string $username, int $poin, array $atribut = []): User
     {
@@ -61,23 +72,44 @@ class LeaderboardBrowserTest extends DuskTestCase
         ]);
     }
 
-    /** PBI-19 Normal: klaim challenge bernilai 10 poin menaikkan total poin dari 20 menjadi 30. */
+    private function admin(): User
+    {
+        return User::factory()->create(['name' => 'Admin EcoChallenge', 'username' => 'admin.uji', 'email' => 'admin.uji@ecochallenge.test', 'role' => User::ROLE_ADMIN]);
+    }
+
+    /** Admin membuka Tinjau Klaim dan menekan tombol Setujui pada klaim tertentu. */
+    private function setujuiLewatWeb(Browser $browser, User $admin, Claim $klaim): Browser
+    {
+        return $browser->loginAs($admin)
+            ->visit('/admin/claims')
+            ->waitForText('Tinjau klaim.')
+            ->assertSeeIn('@claim-'.$klaim->id, $klaim->user->username)
+            ->press('@approve-'.$klaim->id)
+            ->waitFor('@claim-review-status')
+            ->assertSeeIn('@claim-review-status', 'Klaim disetujui.');
+    }
+
+    /** TC-19-01 Normal: admin menyetujui klaim 10 poin di web, total poin mahasiswa naik dari 20 menjadi 30. */
     public function test_pbi19_klaim_10_poin_disetujui_menaikkan_total_poin_20_menjadi_30(): void
     {
         $saya = $this->mahasiswa('rani.hijau', 20);
-        $admin = User::factory()->create(['username' => 'admin.uji', 'email' => 'admin.uji@ecochallenge.test', 'role' => User::ROLE_ADMIN]);
+        $admin = $this->admin();
         $klaim = $this->klaimMenunggu($saya, 10);
 
-        $this->browse(function (Browser $browser) use ($saya, $admin, $klaim) {
-            $browser->loginAs($saya)->visit('/dashboard')->waitForText('TOTAL POIN')->assertSee('20');
+        $this->browse(function (Browser $mahasiswa, Browser $petugas) use ($saya, $admin, $klaim) {
+            $mahasiswa->loginAs($saya)->visit('/dashboard')->waitForText('TOTAL POIN')->assertSee('20');
 
-            app(ClaimService::class)->approve($klaim, $admin);
+            $this->setujuiLewatWeb($petugas, $admin, $klaim)
+                ->assertSeeIn('@claim-review-status', 'rani.hijau mendapat +10 poin')
+                ->assertMissing('@claim-'.$klaim->id);
 
-            $browser->refresh()->waitForText('TOTAL POIN')->assertSee('30');
+            $mahasiswa->refresh()->waitForText('TOTAL POIN')->assertSee('30');
         });
 
         $this->assertSame(30, $saya->fresh()->total_points);
+        $this->assertSame(Claim::STATUS_APPROVED, $klaim->fresh()->status);
         $this->assertSame(10, $klaim->fresh()->points_awarded);
+        $this->assertSame($admin->id, $klaim->fresh()->reviewed_by);
     }
 
     /** PBI-20 Normal: total poin tertinggi berada di urutan pertama. Eksepsi: akun nonaktif tidak tampil. */
@@ -137,21 +169,21 @@ class LeaderboardBrowserTest extends DuskTestCase
         });
     }
 
-    /** PBI-22 Normal: setelah klaim diterima, leaderboard langsung menampilkan poin baru (maks. 2 detik). */
+    /** TC-20-06 Normal: setelah admin menyetujui klaim, leaderboard mahasiswa menampilkan poin baru paling lama 2 detik. */
     public function test_pbi22_poin_baru_langsung_tampil_di_leaderboard_setelah_klaim_diterima(): void
     {
         $saya = $this->mahasiswa('rani.hijau', 20);
         $this->mahasiswa('lawan.satu', 25);
-        $admin = User::factory()->create(['username' => 'admin.uji', 'email' => 'admin.uji@ecochallenge.test', 'role' => User::ROLE_ADMIN]);
+        $admin = $this->admin();
         $klaim = $this->klaimMenunggu($saya, 10);
 
-        $this->browse(function (Browser $browser) use ($saya, $admin, $klaim) {
-            $browser->loginAs($saya)->visit('/leaderboard')->waitForText('POSISI KAMU')->assertSee('#2');
+        $this->browse(function (Browser $mahasiswa, Browser $petugas) use ($saya, $admin, $klaim) {
+            $mahasiswa->loginAs($saya)->visit('/leaderboard')->waitForText('POSISI KAMU')->assertSee('#2');
 
-            app(ClaimService::class)->approve($klaim, $admin);
+            $this->setujuiLewatWeb($petugas, $admin, $klaim);
             $mulai = microtime(true);
 
-            $browser->refresh()->waitForText('#1', 2)->assertSee('Kamu memimpin papan peringkat');
+            $mahasiswa->refresh()->waitForText('#1', 2)->assertSee('Kamu memimpin papan peringkat');
             $this->assertLessThanOrEqual(2.0, microtime(true) - $mulai, 'Poin baru harus tampil paling lama 2 detik.');
         });
 

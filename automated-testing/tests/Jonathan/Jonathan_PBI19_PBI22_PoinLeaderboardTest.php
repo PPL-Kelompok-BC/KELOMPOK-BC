@@ -34,12 +34,23 @@ class Jonathan_PBI19_PBI22_PoinLeaderboardTest extends FiturTestCase
             $browser->visit('/dashboard')->waitForText('#2');
             $this->jeda($browser, 1200);
 
-            // 2) Admin menyetujui klaim (PBI-19). Halaman tinjau admin belum ada, jadi lewat layanan.
+            // 2) Admin masuk, membuka Tinjau Klaim, lalu menekan Setujui (PBI-19).
             $klaim = Claim::where('user_id', $user->id)->firstOrFail();
-            app(ClaimService::class)->approve($klaim, $admin);
+            $this->keluar($browser)->waitForLocation('/login');
+            $this->masuk($browser, $admin);
+            $browser->waitForLocation('/admin')
+                ->visit('/admin/claims')->waitForText('Tinjau klaim.')
+                ->assertSeeIn('@claim-'.$klaim->id, $user->username);
+            $this->jeda($browser, 1000);
+            $browser->press('@approve-'.$klaim->id)
+                ->waitFor('@claim-review-status')
+                ->assertSeeIn('@claim-review-status', $user->username.' mendapat +10 poin');
+            $this->jeda($browser, 1200);
+            $this->keluar($browser)->waitForLocation('/login');
 
-            // 3) Poin dan peringkat langsung berubah di dashboard dan leaderboard (PBI-20 s.d. 22).
-            $browser->refresh()->waitForText('#2')->assertSee('30');
+            // 3) Mahasiswa masuk lagi: poin dan peringkat berubah di dashboard dan leaderboard (PBI-20).
+            $this->masuk($browser, $user);
+            $browser->waitForLocation('/dashboard')->waitForText('#2')->assertSee('30');
             $this->jeda($browser, 1200);
 
             $browser->visit('/leaderboard')->waitForText('POSISI KAMU');
