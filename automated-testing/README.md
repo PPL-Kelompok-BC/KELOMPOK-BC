@@ -199,7 +199,12 @@ lagi setelah tiap tes. Untuk memeriksa data yang dibuat tes di phpMyAdmin:
 3. Buka `http://localhost/phpmyadmin`, pilih basis data **ecochallenge_dusk** (dibuat otomatis).
 
 - `-MySQL` memakai basis data khusus tes `ecochallenge_dusk` (ganti dengan `-NamaDb`, akun dengan
-  `-UserDb`/`-SandiDb`; bawaan XAMPP `root` tanpa sandi). Basis data aplikasi aslimu tidak disentuh.
+  `-UserDb`/`-SandiDb`; bawaan XAMPP `root` tanpa sandi). Basis data aplikasi aslimu tidak disentuh:
+  skrip menolak berjalan bila `-NamaDb` sama dengan `DB_DATABASE` di `ecochallenge/.env`.
+- Aplikasinya sendiri (sesuai proposal TK-04) memakai MySQL basis data **ecochallenge** dari
+  `.env` (lihat `.env.example`; bila MySQL XAMPP di port 3307, ubah `DB_PORT=3307`). Jadi di
+  phpMyAdmin: `ecochallenge` = data yang kamu input lewat aplikasi, `ecochallenge_dusk` = data tes.
+  Tes Dusk tanpa `-MySQL` dan PHPUnit tetap memakai SQLite, jadi tidak menyentuh keduanya.
 - `-SimpanData` membuat data **tes terakhir** tidak dihapus. Setiap tes tetap mengosongkan basis data
   di awal, jadi jalankan satu tes (`-Filter`) bila ingin melihat datanya.
 

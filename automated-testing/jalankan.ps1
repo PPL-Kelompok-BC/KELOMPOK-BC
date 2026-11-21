@@ -55,6 +55,18 @@ $dbTes = Join-Path $app 'database\dusk.sqlite'
 if (-not $MySQL -and -not (Test-Path $dbTes)) { New-Item -ItemType File -Force $dbTes | Out-Null }
 
 if ($MySQL) {
+    # Pengaman: tes selalu mengosongkan basis data di awal, jadi jangan pernah memakai basis data aplikasi.
+    $envApp = Join-Path $app '.env'
+    $dbApp = $null
+    if (Test-Path $envApp) {
+        $baris = Select-String -Path $envApp -Pattern '^\s*DB_DATABASE\s*=\s*(.+?)\s*$' | Select-Object -First 1
+        if ($baris) { $dbApp = $baris.Matches[0].Groups[1].Value.Trim('"', "'") }
+    }
+    if ($dbApp -and $dbApp -eq $NamaDb) {
+        Write-Host "Basis data '$NamaDb' adalah basis data aplikasi (.env). Tes akan menghapus isinya, jadi pakai nama lain, mis. -NamaDb ecochallenge_dusk." -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
     # XAMPP biasanya memakai 3306, tetapi bisa 3307 bila 3306 sudah dipakai program lain.
     $kandidat = $(if ($PortDb -gt 0) { @($PortDb) } else { @(3306, 3307) })
     $PortDb = 0
