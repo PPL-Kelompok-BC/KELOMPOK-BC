@@ -10,7 +10,7 @@ use Laravel\Dusk\Browser;
 /** Alexander – PBI-15 s.d. PBI-18: unggah bukti, verifikasi berlapis, riwayat klaim, dan kirim ulang. */
 class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 {
-    public function test_mahasiswa_mengunggah_foto_bukti_dan_klaim_berstatus_menunggu(): void
+    public function test_mahasiswa_mengunggah_foto_bukti_dan_klaim_langsung_diterima(): void
     {
         $user = $this->mahasiswa();
         $challenge = $this->challenge(null, ['title' => 'Pisahkan Sampah']);
@@ -28,12 +28,12 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
             $this->jeda($browser);
 
             $browser->press('Kirim bukti')
-                ->waitForText('Menunggu verifikasi')
+                ->waitForText('Diterima')
                 ->assertSee('Pisahkan Sampah');
             $this->jeda($browser, 1500);
         });
 
-        $this->assertDatabaseHas('claims', ['user_id' => $user->id, 'challenge_id' => $challenge->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('claims', ['user_id' => $user->id, 'challenge_id' => $challenge->id, 'status' => 'approved']);
     }
 
     public function test_klaim_kedua_untuk_challenge_yang_sama_di_hari_yang_sama_ditolak(): void
@@ -55,7 +55,7 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 
             $browser->visit('/challenges/'.$challenge->id.'/claims')
                 ->attach('photo', $this->fotoPng(2))->press('Kirim bukti')
-                ->waitForText('Menunggu verifikasi');
+                ->waitForText('Diterima');
             $this->jeda($browser);
 
             $browser->visit('/challenges/'.$challenge->id.'/claims')
@@ -79,7 +79,7 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 
             $browser->visit('/challenges/'.$a->id.'/claims')
                 ->attach('photo', $this->fotoPng(4))->press('Kirim bukti')
-                ->waitForText('Menunggu verifikasi');
+                ->waitForText('Diterima');
             $this->jeda($browser);
 
             $browser->visit('/challenges/'.$b->id.'/claims')
@@ -114,10 +114,10 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
         $this->browse(function (Browser $browser) use ($user, $challenge) {
             $this->masuk($browser, $user);
             $browser->waitForLocation('/dashboard')->visit('/challenges/'.$challenge->id.'/claims')
-                ->attach('photo', $this->fotoPng(5))->press('Kirim bukti')->waitForText('Menunggu verifikasi');
+                ->attach('photo', $this->fotoPng(5))->press('Kirim bukti')->waitForText('Diterima');
             $this->jeda($browser);
 
-            $browser->visit('/claims')->assertSee('Klaim saya')->assertSee('Naik Angkot')->assertSee('Menunggu');
+            $browser->visit('/claims')->assertSee('Klaim saya')->assertSee('Naik Angkot')->assertSee('Diterima');
             $this->jeda($browser, 1500);
         });
     }
@@ -147,11 +147,11 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 
             $browser->attach('photo', $this->fotoPng(6));
             $this->jeda($browser, 500);
-            $browser->press('Kirim ulang')->waitForText('Menunggu');
+            $browser->press('Kirim ulang')->waitForText('Diterima');
             $this->jeda($browser, 1500);
         });
 
-        $this->assertSame('pending', $klaim->fresh()->status);
+        $this->assertSame('approved', $klaim->fresh()->status);
     }
 
     public function test_mahasiswa_tidak_bisa_melihat_klaim_milik_orang_lain(): void

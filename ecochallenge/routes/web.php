@@ -7,4 +7,3 @@ require __DIR__.'/eco-klaim.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/eco-admin.php';
 require __DIR__.'/eco-leaderboard.php';
-require __DIR__.'/eco-poin.php';

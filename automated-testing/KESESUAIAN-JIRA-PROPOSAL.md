@@ -67,7 +67,7 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 |---|---|---|---|
 | PBI-15 | Normal: pilih foto, kirim, halaman hasil klaim (≤ 3 langkah) | `test_pbi15_normal_*` | ✅ |
 | PBI-15 | Eksepsi: PDF atau di atas 2 MB ditolak dengan alasan jelas | `test_pbi15_eksepsi_*` (2 tes), `test_berkas_selain_jpg_png_ditolak` | ✅ |
-| PBI-16 | Normal: foto dengan EXIF hari ini diterima | `test_pbi16_normal_*` | ✅ (Temuan 3) |
+| PBI-16 | Normal: foto dengan EXIF hari ini diterima | `test_pbi16_normal_*` | ✅ (Temuan 3 sudah diperbaiki) |
 | PBI-16 | Eksepsi: hash foto sama ditolak | `test_foto_yang_sama_tidak_bisa_dipakai_dua_kali` | ✅ (Temuan 4) |
 | PBI-17 | Normal: pemilik membuka foto dari riwayat | `test_pbi17_normal_*` | ✅ |
 | PBI-17 | Eksepsi: mahasiswa lain tidak bisa membuka URL foto | `test_pbi17_eksepsi_*` | ✅ (Temuan 5) |
@@ -105,8 +105,9 @@ memutuskan apakah aplikasi atau dokumennya yang disesuaikan. Tidak ada kode apli
    `streaks` ada tetapi kosong; fitur streak baru dikerjakan di PBI-26.
 2. **Pesan akun nonaktif (Jira PBI-04 TC-09):** Jira: "Akun Anda dinonaktifkan, hubungi admin".
    Aplikasi: "Akun ini dinonaktifkan. Hubungi admin."
-3. **Tanda tinjau (proposal PBI-16):** proposal: foto ber-EXIF hari ini diterima *tanpa* tanda
-   prioritas tinjau. Aplikasi menandai semua klaim `needs_review = true`.
+3. **Tanda tinjau (proposal PBI-16): SUDAH DIPERBAIKI.** Sesuai UC-06, klaim yang lolos verifikasi
+   langsung diterima dan poin bertambah saat itu juga; `needs_review` hanya `true` untuk foto tanpa EXIF
+   (alur 5b).
 4. **Pesan foto kembar (proposal PBI-16):** proposal: "Foto ini sudah pernah dipakai untuk klaim
    lain". Aplikasi: "Foto ini sudah pernah dipakai. Gunakan foto lain."
 5. **Foto milik orang lain (proposal PBI-17):** proposal: respons 403. Aplikasi: 404 (menyembunyikan

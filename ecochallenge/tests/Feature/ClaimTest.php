@@ -80,7 +80,11 @@ class ClaimTest extends TestCase
 
         $this->assertSame($user->id, $claim->user_id);
         $this->assertSame($challenge->id, $claim->challenge_id);
-        $this->assertSame(Claim::STATUS_PENDING, $claim->status);
+        // UC-06: klaim yang lolos verifikasi langsung diterima dan poin bertambah (PBI-19).
+        $this->assertSame(Claim::STATUS_APPROVED, $claim->status);
+        $this->assertSame($challenge->points, $claim->points_awarded);
+        $this->assertSame($challenge->points, $user->fresh()->total_points);
+        // UC-06 alur 5b: foto tanpa EXIF tetap diterima dan diberi tanda prioritas tinjau.
         $this->assertTrue($claim->needs_review);
 
         // Foto tersimpan byte asli di penyimpanan privat (disk lokal).
@@ -210,7 +214,8 @@ class ClaimTest extends TestCase
 
         $claim->refresh();
 
-        $this->assertSame(Claim::STATUS_PENDING, $claim->status);
+        $this->assertSame(Claim::STATUS_APPROVED, $claim->status);
+        $this->assertSame($challenge->points, $user->fresh()->total_points);
         $this->assertNull($claim->cancel_reason);
         $this->assertNull($claim->reviewed_at);
         $this->assertNull($claim->reviewed_by);
@@ -220,8 +225,8 @@ class ClaimTest extends TestCase
         $disk->assertExists($claim->proof_path);
     }
 
-    /** PBI-18: klaim yang belum ditolak tidak bisa dikirim ulang. */
-    public function test_klaim_pending_tidak_bisa_dikirim_ulang(): void
+    /** PBI-18: klaim yang tidak ditolak (sudah diterima) tidak bisa dikirim ulang. */
+    public function test_klaim_yang_sudah_diterima_tidak_bisa_dikirim_ulang(): void
     {
         $user = $this->mahasiswa();
         $challenge = $this->challenge();
@@ -238,6 +243,7 @@ class ClaimTest extends TestCase
             ])
             ->assertSessionHasErrors('photo');
 
-        $this->assertSame(Claim::STATUS_PENDING, $claim->fresh()->status);
+        $this->assertSame(Claim::STATUS_APPROVED, $claim->fresh()->status);
+        $this->assertSame($challenge->points, $user->fresh()->total_points, 'Poin tidak boleh bertambah dua kali.');
     }
 }

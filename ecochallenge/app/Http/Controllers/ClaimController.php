@@ -2,21 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ClaimAlreadyReviewedException;
 use App\Exceptions\InvalidClaimPhotoException;
 use App\Http\Requests\StoreClaimRequest;
 use App\Models\Challenge;
 use App\Models\Claim;
 use App\Models\User;
 use App\Services\ClaimPhotoService;
+use App\Services\ClaimService;
+use App\Services\LeaderboardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class ClaimController extends Controller
 {
-    public function __construct(private readonly ClaimPhotoService $photos) {}
+    public function __construct(
+        private readonly ClaimPhotoService $photos,
+        private readonly ClaimService $claims,
+    ) {}
 
     /** PBI-15: formulir unggah bukti foto. */
     public function create(Challenge $challenge): View
@@ -43,21 +50,21 @@ class ClaimController extends Controller
             return back()->withErrors(['photo' => $exception->getMessage()]);
         }
 
-        $claim = Claim::create([
-            'user_id' => $user->id,
-            'challenge_id' => $challenge->id,
-            'proof_path' => $photo['path'],
-            'photo_hash' => $photo['hash'],
-            'photo_taken_at' => $photo['taken_at'],
-            'needs_review' => true,
-            'claim_date' => today()->toDateString(),
-            'status' => Claim::STATUS_PENDING,
-            'note' => $request->note,
-        ]);
+        // UC-06 langkah 7-8: klaim yang lolos verifikasi langsung diterima, poin dan emisi
+        // ditambahkan dalam satu transaksi, lalu leaderboard diperbarui (PBI-19, PBI-20).
+        try {
+            $claim = $this->claims->submit($user, $challenge, $photo, $request->note);
+        } catch (Throwable $exception) {
+            // UC-06 alur 7a: transaksi gagal, foto yang sudah tersimpan dihapus.
+            $this->photos->delete($photo['path']);
+            report($exception);
+
+            return back()->withErrors(['photo' => 'Klaim gagal disimpan. Silakan coba lagi.']);
+        }
 
         return redirect()
             ->route('claims.show', $claim)
-            ->with('status', 'Bukti berhasil dikirim dan menunggu verifikasi.');
+            ->with('status', "Klaim diterima. +{$claim->points_awarded} poin ditambahkan.");
     }
 
     /** Riwayat klaim milik pengguna. */
@@ -71,14 +78,27 @@ class ClaimController extends Controller
         return view('claims.index', compact('claims'));
     }
 
-    /** PBI-18: detail klaim beserta alasan penolakan (bila ditolak). */
-    public function show(Request $request, Claim $claim): View
+    /** UC-06 langkah 9 (Hasil Klaim) dan PBI-18: detail klaim beserta alasan penolakan. */
+    public function show(Request $request, Claim $claim, LeaderboardService $leaderboard): View
     {
         $this->authorizeView($claim, $request->user());
 
-        $claim->load('challenge');
+        $claim->load(['challenge', 'user']);
 
-        return view('claims.show', compact('claim'));
+        // Ringkasan terbaru milik pemilik klaim: total poin, peringkat, dan total estimasi emisi.
+        $result = null;
+        if ($claim->status === Claim::STATUS_APPROVED) {
+            $owner = $claim->user;
+            $result = [
+                'total_points' => (int) $owner->total_points,
+                'rank' => $leaderboard->rankOf($owner),
+                'total_co2e_gram' => (int) Claim::where('user_id', $owner->id)
+                    ->where('status', Claim::STATUS_APPROVED)
+                    ->sum('co2e_awarded_gram'),
+            ];
+        }
+
+        return view('claims.show', compact('claim', 'result'));
     }
 
     /** PBI-18: kirim ulang bukti untuk klaim yang ditolak. */
@@ -96,23 +116,27 @@ class ClaimController extends Controller
             return back()->withErrors(['photo' => $exception->getMessage()]);
         }
 
-        $this->photos->delete($claim->proof_path);
+        $oldPath = $claim->proof_path;
 
-        $claim->update([
-            'proof_path' => $photo['path'],
-            'photo_hash' => $photo['hash'],
-            'photo_taken_at' => $photo['taken_at'],
-            'needs_review' => true,
-            'status' => Claim::STATUS_PENDING,
-            'cancel_reason' => null,
-            'reviewed_at' => null,
-            'reviewed_by' => null,
-            'note' => $request->note,
-        ]);
+        try {
+            $claim = $this->claims->resubmit($claim, $photo, $request->note);
+        } catch (Throwable $exception) {
+            $this->photos->delete($photo['path']);
+
+            if (! $exception instanceof ClaimAlreadyReviewedException) {
+                report($exception);
+            }
+
+            return back()->withErrors(['photo' => $exception instanceof ClaimAlreadyReviewedException
+                ? $exception->getMessage()
+                : 'Klaim gagal disimpan. Silakan coba lagi.']);
+        }
+
+        $this->photos->delete($oldPath);
 
         return redirect()
             ->route('claims.show', $claim)
-            ->with('status', 'Bukti baru berhasil dikirim ulang dan menunggu verifikasi.');
+            ->with('status', "Bukti baru diterima. +{$claim->points_awarded} poin ditambahkan.");
     }
 
     /** PBI-17: streaming foto privat (hanya pemilik atau admin). */
