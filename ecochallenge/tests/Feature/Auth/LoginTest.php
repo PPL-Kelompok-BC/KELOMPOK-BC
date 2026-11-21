@@ -113,7 +113,7 @@ class LoginTest extends TestCase
         $this->from('/login')
             ->post('/login', ['email' => 'mhs@example.com', 'password' => 'password'])
             ->assertRedirect('/login')
-            ->assertSessionHasErrors(['email' => 'Akun ini dinonaktifkan. Hubungi admin.']);
+            ->assertSessionHasErrors(['email' => 'Akun Anda dinonaktifkan, hubungi admin']);
 
         $this->assertGuest();
     }

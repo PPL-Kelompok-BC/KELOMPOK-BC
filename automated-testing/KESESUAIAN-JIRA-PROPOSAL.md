@@ -12,7 +12,7 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 | PBI | Test case / kriteria | Tes | Status |
 |---|---|---|---|
 | PBI-03 | TC-01 registrasi valid → dashboard, kata sandi ter-hash | `test_registrasi_berhasil_lalu_masuk_ke_dashboard_mahasiswa`, `test_pbi03_tc01_akun_tersimpan_dengan_kata_sandi_ter_hash_dan_streak_awal_nol` | ✅ |
-| PBI-03 | TC-01 streak awal bernilai 0 | `test_pbi03_tc01_baris_streak_awal_nol_dibuat_saat_registrasi` | ⏭ Temuan 1 |
+| PBI-03 | TC-01 streak awal bernilai 0 | `test_pbi03_tc01_baris_streak_awal_nol_dibuat_saat_registrasi` | ✅ (Temuan 1 sudah diperbaiki) |
 | PBI-03 | TC-02 email dipakai, TC-03 username dipakai | `test_username_dan_email_yang_sudah_dipakai_ditolak` | ✅ |
 | PBI-03 | TC-04 kata sandi 5 karakter / konfirmasi beda | `test_pbi03_tc04_*` (2 tes) | ✅ |
 | PBI-04 | TC-05, TC-06 login mahasiswa dan admin | `test_mahasiswa_masuk_ke_dashboard_mahasiswa`, `test_admin_masuk_ke_dashboard_admin` | ✅ |
@@ -67,11 +67,11 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 |---|---|---|---|
 | PBI-15 | Normal: pilih foto, kirim, halaman hasil klaim (≤ 3 langkah) | `test_pbi15_normal_*` | ✅ |
 | PBI-15 | Eksepsi: PDF atau di atas 2 MB ditolak dengan alasan jelas | `test_pbi15_eksepsi_*` (2 tes), `test_berkas_selain_jpg_png_ditolak` | ✅ |
-| PBI-16 | Normal: foto dengan EXIF hari ini diterima | `test_pbi16_normal_*` | ✅ (Temuan 3) |
-| PBI-16 | Eksepsi: hash foto sama ditolak | `test_foto_yang_sama_tidak_bisa_dipakai_dua_kali` | ✅ (Temuan 4) |
+| PBI-16 | Normal: foto dengan EXIF hari ini diterima | `test_pbi16_normal_*` | ✅ (Temuan 3 sudah diperbaiki) |
+| PBI-16 | Eksepsi: hash foto sama ditolak | `test_foto_yang_sama_tidak_bisa_dipakai_dua_kali` | ✅ (Temuan 4 sudah diperbaiki) |
 | PBI-17 | Normal: pemilik membuka foto dari riwayat | `test_pbi17_normal_*` | ✅ |
-| PBI-17 | Eksepsi: mahasiswa lain tidak bisa membuka URL foto | `test_pbi17_eksepsi_*` | ✅ (Temuan 5) |
-| PBI-18 | Normal: klaim kedua di hari sama ditolak + kirim ulang | `test_klaim_kedua_*` (dilewati di SQLite), `test_klaim_ditolak_menampilkan_alasan_dan_bisa_dikirim_ulang` | ⏭ Temuan 6 |
+| PBI-17 | Eksepsi: mahasiswa lain tidak bisa membuka URL foto | `test_pbi17_eksepsi_*` | ✅ (Temuan 5 sudah diperbaiki) |
+| PBI-18 | Normal: klaim kedua di hari sama ditolak + kirim ulang | `test_klaim_kedua_*`, `test_klaim_ditolak_menampilkan_alasan_dan_bisa_dikirim_ulang` | ✅ (Temuan 6 sudah diperbaiki) |
 | PBI-18 | Eksepsi: foto tanpa EXIF tetap diterima dan ditandai tinjau | `test_pbi18_eksepsi_*` | ✅ |
 
 ## Hafidz (acuan proposal; kartu SCRUM-27..30 belum berisi test case)
@@ -84,7 +84,7 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 | PBI-10 | Normal: ubah challenge tersimpan | `test_admin_mengubah_challenge_lewat_halaman_edit` | ✅ |
 | PBI-10 | Eksepsi: poin nol / negatif ditolak | `test_pbi10_eksepsi_*` | ✅ |
 | PBI-11 | Normal: nonaktif hilang dari katalog | `test_pbi11_normal_*`, `test_admin_menonaktifkan_lalu_mengaktifkan_kembali_challenge` | ✅ |
-| PBI-11 | Eksepsi: klaim pada challenge nonaktif ditolak | `test_pbi11_eksepsi_*` | ✅ (Temuan 7) |
+| PBI-11 | Eksepsi: klaim pada challenge nonaktif ditolak | `test_pbi11_eksepsi_*` | ✅ (Temuan 7 sudah diperbaiki) |
 
 ## Seto (acuan proposal; kartu SCRUM-10, 25, 26 belum berisi test case)
 
@@ -99,21 +99,23 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 ## Temuan (perbedaan aplikasi dengan Jira atau proposal)
 
 Tes ditulis mengikuti perilaku aplikasi yang berjalan; perbedaan di bawah ini dicatat agar tim bisa
-memutuskan apakah aplikasi atau dokumennya yang disesuaikan. Tidak ada kode aplikasi yang diubah.
+memutuskan apakah aplikasi atau dokumennya yang disesuaikan. Temuan yang sudah diperbaiki ditandai beserta nomor PR-nya.
 
-1. **Streak awal (Jira PBI-03 TC-01):** registrasi belum membuat baris `streaks` bernilai 0. Tabel
-   `streaks` ada tetapi kosong; fitur streak baru dikerjakan di PBI-26.
-2. **Pesan akun nonaktif (Jira PBI-04 TC-09):** Jira: "Akun Anda dinonaktifkan, hubungi admin".
-   Aplikasi: "Akun ini dinonaktifkan. Hubungi admin."
-3. **Tanda tinjau (proposal PBI-16):** proposal: foto ber-EXIF hari ini diterima *tanpa* tanda
-   prioritas tinjau. Aplikasi menandai semua klaim `needs_review = true`.
-4. **Pesan foto kembar (proposal PBI-16):** proposal: "Foto ini sudah pernah dipakai untuk klaim
-   lain". Aplikasi: "Foto ini sudah pernah dipakai. Gunakan foto lain."
-5. **Foto milik orang lain (proposal PBI-17):** proposal: respons 403. Aplikasi: 404 (menyembunyikan
-   keberadaan klaim).
-6. **Satu klaim per hari (proposal PBI-18):** proposal: pesan "Kamu sudah mengklaim challenge ini
-   hari ini". Aplikasi: "Anda sudah mengirim bukti untuk challenge ini hari ini." Selain itu, di
-   SQLite pengecekan `alreadyClaimedToday()` meleset (`claim_date` tersimpan `Y-m-d 00:00:00`), sehingga
-   klaim kedua menabrak batas unik (HTTP 500). Di MySQL tidak terjadi. Perbaikan: `whereDate('claim_date', today())`.
-7. **Klaim pada challenge nonaktif (proposal PBI-11):** proposal: pesan "Challenge ini sudah tidak
-   aktif". Aplikasi: halaman 404.
+1. **Streak awal (Jira PBI-03 TC-01): SUDAH DIPERBAIKI (PR #29).** Registrasi kini membuat baris `streaks`
+   bernilai 0 dalam satu transaksi dengan akun, sesuai UC-01 langkah 5 di proposal.
+2. **Pesan akun nonaktif (Jira PBI-04 TC-09): SUDAH DIPERBAIKI (PR #29).** Aplikasi kini memakai pesan proposal
+   UC-02 alur 2c: "Akun Anda dinonaktifkan, hubungi admin".
+3. **Tanda tinjau (proposal PBI-16): SUDAH DIPERBAIKI (PR #28).** Sesuai UC-06, klaim yang lolos verifikasi
+   langsung diterima dan poin bertambah saat itu juga; `needs_review` hanya `true` untuk foto tanpa EXIF
+   (alur 5b).
+4. **Pesan foto kembar (proposal PBI-16): SUDAH DIPERBAIKI (PR #28).** Pesan kini "Foto ini sudah
+   pernah dipakai untuk klaim lain." sesuai Tabel 2.3 butir (d).
+5. **Foto milik orang lain (proposal PBI-17): SUDAH DIPERBAIKI (PR #28).** URL foto milik mahasiswa
+   lain kini memberi respons 403.
+6. **Satu klaim per hari (proposal Tabel 2.3 butir c): SUDAH DIPERBAIKI (PR #28).** Pesan kini "Kamu
+   sudah mengklaim challenge ini hari ini." dan pengecekan memakai `whereDate`, sehingga di SQLite tidak
+   lagi berakhir HTTP 500. Tes yang sebelumnya dilewati kini berjalan.
+7. **Klaim pada challenge nonaktif (proposal PBI-11): SUDAH DIPERBAIKI (PR #28).** Klaim ditolak dengan
+   pesan "Challenge ini sudah tidak aktif." dan formulir tidak ditampilkan.
+8. **Tanggal EXIF bukan hari ini (proposal Tabel 2.3 butir e): DITAMBAHKAN (PR #28).** Foto yang
+   tanggal EXIF-nya bukan hari ini kini ditolak; sebelumnya tetap diterima.

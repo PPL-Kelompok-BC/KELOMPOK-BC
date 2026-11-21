@@ -113,7 +113,7 @@ class LoginBrowserTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($user) {
             $this->masuk($browser, $user->email)
                 ->waitForText('dinonaktifkan')
-                ->assertSee('Hubungi admin')
+                ->assertSee('Akun Anda dinonaktifkan, hubungi admin')
                 ->assertPathIs('/login');
         });
     }
