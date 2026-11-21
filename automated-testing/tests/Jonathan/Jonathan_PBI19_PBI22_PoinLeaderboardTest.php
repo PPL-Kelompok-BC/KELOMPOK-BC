@@ -6,7 +6,6 @@ use Tests\Browser\Fitur\FiturTestCase;
 
 use App\Models\Claim;
 use App\Models\User;
-use App\Services\ClaimService;
 use App\Services\LeaderboardService;
 use Laravel\Dusk\Browser;
 
@@ -15,38 +14,39 @@ class Jonathan_PBI19_PBI22_PoinLeaderboardTest extends FiturTestCase
 {
     public function test_poin_bertambah_otomatis_dan_peringkat_naik_setelah_klaim_disetujui(): void
     {
-        // Skenario proposal PBI-19: klaim challenge bernilai 10 poin menaikkan total poin dari 20 menjadi 30.
+        // Proposal UC-06 + PBI-19: klaim challenge 10 poin yang lolos verifikasi langsung diterima,
+        // dan total poin naik dari 20 menjadi 30 dalam satu transaksi.
         $user = $this->mahasiswa(['total_points' => 20]);
-        $this->mahasiswa(['total_points' => 50]);
-        $admin = $this->admin();
+        $this->mahasiswa(['total_points' => 25]);
         $challenge = $this->challenge(null, ['title' => 'Pisahkan Sampah', 'points' => 10]);
 
-        $this->browse(function (Browser $browser) use ($user, $admin, $challenge) {
-            // 1) Mahasiswa mengirim bukti lewat browser.
+        $this->browse(function (Browser $browser) use ($user, $challenge) {
+            // 1) Sebelum klaim: 20 poin, peringkat #2.
             $this->masuk($browser, $user);
-            $browser->waitForLocation('/dashboard')
-                ->visit('/challenges/'.$challenge->id.'/claims')
-                ->attach('photo', $this->fotoPng(11))->press('Kirim bukti')
-                ->waitForText('Menunggu verifikasi');
-            $this->jeda($browser, 1000);
-
-            // Sebelum disetujui: poin 0, peringkat 2 dari 2.
-            $browser->visit('/dashboard')->waitForText('#2');
+            $browser->waitForLocation('/dashboard')->waitForText('#2')->assertSee('20');
             $this->jeda($browser, 1200);
 
-            // 2) Admin menyetujui klaim (PBI-19). Halaman tinjau admin belum ada, jadi lewat layanan.
-            $klaim = Claim::where('user_id', $user->id)->firstOrFail();
-            app(ClaimService::class)->approve($klaim, $admin);
+            // 2) Mahasiswa mengirim bukti; klaim langsung diterima dan halaman Hasil Klaim tampil.
+            $browser->visit('/challenges/'.$challenge->id.'/claims')
+                ->attach('photo', $this->fotoPng(11));
+            $this->jeda($browser, 800);
+            $browser->press('Kirim bukti')
+                ->waitFor('@claim-result')
+                ->assertSee('Diterima')
+                ->assertSeeIn('@claim-status-message', 'Klaim diterima. +10 poin ditambahkan.')
+                ->assertSeeIn('@claim-result-total', '30');
+            $this->jeda($browser, 1500);
 
-            // 3) Poin dan peringkat langsung berubah di dashboard dan leaderboard (PBI-20 s.d. 22).
-            $browser->refresh()->waitForText('#2')->assertSee('30');
+            // 3) Poin dan peringkat baru terlihat di dashboard dan leaderboard (PBI-20).
+            $browser->visit('/dashboard')->waitForText('#1')->assertSee('30');
             $this->jeda($browser, 1200);
 
-            $browser->visit('/leaderboard')->waitForText('POSISI KAMU');
+            $browser->visit('/leaderboard')->waitForText('POSISI KAMU')->assertSee('Kamu memimpin papan peringkat');
             $this->jeda($browser, 1500);
         });
 
         $this->assertSame(30, $user->fresh()->total_points);
+        $this->assertSame('approved', Claim::where('user_id', $user->id)->sole()->status);
     }
 
     public function test_leaderboard_mengurutkan_berdasarkan_poin_dan_menandai_posisi_sendiri(): void

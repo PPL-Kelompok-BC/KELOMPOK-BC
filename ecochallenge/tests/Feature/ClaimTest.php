@@ -80,7 +80,11 @@ class ClaimTest extends TestCase
 
         $this->assertSame($user->id, $claim->user_id);
         $this->assertSame($challenge->id, $claim->challenge_id);
-        $this->assertSame(Claim::STATUS_PENDING, $claim->status);
+        // UC-06: klaim yang lolos verifikasi langsung diterima dan poin bertambah (PBI-19).
+        $this->assertSame(Claim::STATUS_APPROVED, $claim->status);
+        $this->assertSame($challenge->points, $claim->points_awarded);
+        $this->assertSame($challenge->points, $user->fresh()->total_points);
+        // UC-06 alur 5b: foto tanpa EXIF tetap diterima dan diberi tanda prioritas tinjau.
         $this->assertTrue($claim->needs_review);
 
         // Foto tersimpan byte asli di penyimpanan privat (disk lokal).
@@ -124,9 +128,30 @@ class ClaimTest extends TestCase
             ->post(route('claims.store', $challenge), [
                 'photo' => UploadedFile::fake()->image('bukti-lain.jpg', 320, 240),
             ])
-            ->assertSessionHasErrors('photo');
+            ->assertSessionHasErrors(['photo' => 'Kamu sudah mengklaim challenge ini hari ini.']);
 
         $this->assertSame(1, Claim::count());
+        $this->assertSame($challenge->points, $user->fresh()->total_points, 'Poin hanya bertambah satu kali.');
+    }
+
+    /** PBI-11 eksepsi / Tabel 2.3 butir (a): klaim pada challenge nonaktif ditolak dengan alasan. */
+    public function test_klaim_pada_challenge_nonaktif_ditolak_dengan_alasan(): void
+    {
+        $user = $this->mahasiswa();
+        $challenge = $this->challenge(['is_active' => false]);
+
+        $this->actingAs($user)->get(route('claims.create', $challenge))
+            ->assertOk()
+            ->assertSee('Challenge ini sudah tidak aktif.')
+            ->assertDontSee(route('claims.store', $challenge), false);
+
+        $this->actingAs($user)
+            ->from(route('claims.create', $challenge))
+            ->post(route('claims.store', $challenge), ['photo' => UploadedFile::fake()->image('bukti.jpg', 320, 240)])
+            ->assertSessionHasErrors(['photo' => 'Challenge ini sudah tidak aktif.']);
+
+        $this->assertSame(0, Claim::count());
+        $this->assertSame(0, (int) $user->fresh()->total_points);
     }
 
     /** PBI-16: foto ber-hash sama ditolak walau challenge berbeda. */
@@ -145,7 +170,7 @@ class ClaimTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('claims.store', $challengeB), ['photo' => $upload])
-            ->assertSessionHasErrors('photo');
+            ->assertSessionHasErrors(['photo' => 'Foto ini sudah pernah dipakai untuk klaim lain.']);
 
         $this->assertSame(1, Claim::count());
     }
@@ -164,9 +189,10 @@ class ClaimTest extends TestCase
             ->get(route('claims.photo', $claim))
             ->assertOk();
 
+        // PBI-17 eksepsi: mahasiswa lain menerima respons 403.
         $this->actingAs($this->mahasiswa())
             ->get(route('claims.photo', $claim))
-            ->assertNotFound();
+            ->assertForbidden();
 
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -210,7 +236,8 @@ class ClaimTest extends TestCase
 
         $claim->refresh();
 
-        $this->assertSame(Claim::STATUS_PENDING, $claim->status);
+        $this->assertSame(Claim::STATUS_APPROVED, $claim->status);
+        $this->assertSame($challenge->points, $user->fresh()->total_points);
         $this->assertNull($claim->cancel_reason);
         $this->assertNull($claim->reviewed_at);
         $this->assertNull($claim->reviewed_by);
@@ -220,8 +247,8 @@ class ClaimTest extends TestCase
         $disk->assertExists($claim->proof_path);
     }
 
-    /** PBI-18: klaim yang belum ditolak tidak bisa dikirim ulang. */
-    public function test_klaim_pending_tidak_bisa_dikirim_ulang(): void
+    /** PBI-18: klaim yang tidak ditolak (sudah diterima) tidak bisa dikirim ulang. */
+    public function test_klaim_yang_sudah_diterima_tidak_bisa_dikirim_ulang(): void
     {
         $user = $this->mahasiswa();
         $challenge = $this->challenge();
@@ -238,6 +265,7 @@ class ClaimTest extends TestCase
             ])
             ->assertSessionHasErrors('photo');
 
-        $this->assertSame(Claim::STATUS_PENDING, $claim->fresh()->status);
+        $this->assertSame(Claim::STATUS_APPROVED, $claim->fresh()->status);
+        $this->assertSame($challenge->points, $user->fresh()->total_points, 'Poin tidak boleh bertambah dua kali.');
     }
 }

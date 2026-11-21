@@ -6,22 +6,33 @@ use App\Models\Category;
 use App\Models\Challenge;
 use App\Models\Claim;
 use App\Models\User;
-use App\Services\ClaimService;
 use App\Services\LeaderboardService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 /**
- * PBI-19 s.d. PBI-22 · Jonathan – Poin dan leaderboard (SCRUM-31 s.d. SCRUM-34).
+ * PBI-19 · Jonathan – Poin otomatis saat klaim diterima (SCRUM-31, TC-19-xx) dan
+ * PBI-20 · Jonathan – Leaderboard total poin, posisi sendiri, dan pembaruan maks. 2 detik
+ * (SCRUM-32, TC-20-xx; gabungan PBI-20, PBI-21/SCRUM-33, dan PBI-22/SCRUM-34).
  *
- * Kartu Jira belum memuat test case, jadi acuannya kriteria penerimaan di proposal (Tabel PBI).
+ * Poin bertambah lewat alur sungguhan UC-06 di web: mahasiswa mengirim foto bukti, klaim yang
+ * lolos verifikasi langsung diterima, lalu total poin dan leaderboard berubah dari basis data.
  * Skenario eksepsi yang tidak bisa dipicu dari browser (penyimpanan klaim gagal, cache gagal)
  * diuji di tests/Feature/ClaimPointsTest.php dan tests/Feature/LeaderboardTest.php.
  */
 class LeaderboardBrowserTest extends DuskTestCase
 {
     use DatabaseMigrations;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Cache leaderboard (umur 2 detik) dari tes sebelumnya jangan sampai terbawa.
+        Cache::flush();
+    }
 
     private function mahasiswa(string $username, int $poin, array $atribut = []): User
     {
@@ -35,10 +46,11 @@ class LeaderboardBrowserTest extends DuskTestCase
         ], $atribut));
     }
 
-    private function klaimMenunggu(User $user, int $poinChallenge): Claim
+    private function challenge(int $poinChallenge): Challenge
     {
         $kategori = Category::create(['name' => 'Kategori '.uniqid()]);
-        $challenge = Challenge::create([
+
+        return Challenge::create([
             'category_id' => $kategori->id,
             'title' => 'Pisahkan Sampah',
             'description' => 'Memilah sampah organik dan anorganik.',
@@ -49,35 +61,50 @@ class LeaderboardBrowserTest extends DuskTestCase
             'estimated_co2e_gram' => 200,
             'emission_source' => 'Estimasi uji',
         ]);
-
-        return Claim::create([
-            'user_id' => $user->id,
-            'challenge_id' => $challenge->id,
-            'proof_path' => 'claim-proofs/uji.png',
-            'photo_hash' => hash('sha256', uniqid('', true)),
-            'needs_review' => true,
-            'claim_date' => today()->toDateString(),
-            'status' => Claim::STATUS_PENDING,
-        ]);
     }
 
-    /** PBI-19 Normal: klaim challenge bernilai 10 poin menaikkan total poin dari 20 menjadi 30. */
+    /** Foto PNG kecil dengan warna acak agar hash SHA-256 selalu berbeda. */
+    private function fotoBukti(): string
+    {
+        $gambar = imagecreatetruecolor(64, 64);
+        imagefill($gambar, 0, 0, imagecolorallocate($gambar, random_int(0, 255), random_int(0, 255), random_int(0, 255)));
+        $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'bukti-'.uniqid().'.png';
+        imagepng($gambar, $path);
+        imagedestroy($gambar);
+
+        return $path;
+    }
+
+    /** Mahasiswa membuka formulir klaim, melampirkan foto, lalu menekan Kirim bukti. */
+    private function kirimBukti(Browser $browser, Challenge $challenge): Browser
+    {
+        return $browser->visit('/challenges/'.$challenge->id.'/claims')
+            ->attach('photo', $this->fotoBukti())
+            ->press('Kirim bukti')
+            ->waitFor('@claim-result')
+            ->assertSee('Diterima');
+    }
+
+    /** TC-19-01 Normal: klaim challenge 10 poin yang diterima menaikkan total poin dari 20 menjadi 30. */
     public function test_pbi19_klaim_10_poin_disetujui_menaikkan_total_poin_20_menjadi_30(): void
     {
         $saya = $this->mahasiswa('rani.hijau', 20);
-        $admin = User::factory()->create(['username' => 'admin.uji', 'email' => 'admin.uji@ecochallenge.test', 'role' => User::ROLE_ADMIN]);
-        $klaim = $this->klaimMenunggu($saya, 10);
+        $challenge = $this->challenge(10);
 
-        $this->browse(function (Browser $browser) use ($saya, $admin, $klaim) {
+        $this->browse(function (Browser $browser) use ($saya, $challenge) {
             $browser->loginAs($saya)->visit('/dashboard')->waitForText('TOTAL POIN')->assertSee('20');
 
-            app(ClaimService::class)->approve($klaim, $admin);
+            $this->kirimBukti($browser, $challenge)
+                ->assertSeeIn('@claim-status-message', 'Klaim diterima. +10 poin ditambahkan.')
+                ->assertSeeIn('@claim-result-total', '30');
 
-            $browser->refresh()->waitForText('TOTAL POIN')->assertSee('30');
+            $browser->visit('/dashboard')->waitForText('TOTAL POIN')->assertSee('30');
         });
 
+        $klaim = Claim::where('user_id', $saya->id)->sole();
         $this->assertSame(30, $saya->fresh()->total_points);
-        $this->assertSame(10, $klaim->fresh()->points_awarded);
+        $this->assertSame(Claim::STATUS_APPROVED, $klaim->status);
+        $this->assertSame(10, $klaim->points_awarded);
     }
 
     /** PBI-20 Normal: total poin tertinggi berada di urutan pertama. Eksepsi: akun nonaktif tidak tampil. */
@@ -137,21 +164,20 @@ class LeaderboardBrowserTest extends DuskTestCase
         });
     }
 
-    /** PBI-22 Normal: setelah klaim diterima, leaderboard langsung menampilkan poin baru (maks. 2 detik). */
+    /** TC-20-06 Normal: setelah klaim diterima, leaderboard menampilkan poin baru paling lama 2 detik. */
     public function test_pbi22_poin_baru_langsung_tampil_di_leaderboard_setelah_klaim_diterima(): void
     {
         $saya = $this->mahasiswa('rani.hijau', 20);
         $this->mahasiswa('lawan.satu', 25);
-        $admin = User::factory()->create(['username' => 'admin.uji', 'email' => 'admin.uji@ecochallenge.test', 'role' => User::ROLE_ADMIN]);
-        $klaim = $this->klaimMenunggu($saya, 10);
+        $challenge = $this->challenge(10);
 
-        $this->browse(function (Browser $browser) use ($saya, $admin, $klaim) {
+        $this->browse(function (Browser $browser) use ($saya, $challenge) {
             $browser->loginAs($saya)->visit('/leaderboard')->waitForText('POSISI KAMU')->assertSee('#2');
 
-            app(ClaimService::class)->approve($klaim, $admin);
+            $this->kirimBukti($browser, $challenge);
             $mulai = microtime(true);
 
-            $browser->refresh()->waitForText('#1', 2)->assertSee('Kamu memimpin papan peringkat');
+            $browser->visit('/leaderboard')->waitForText('#1', 2)->assertSee('Kamu memimpin papan peringkat');
             $this->assertLessThanOrEqual(2.0, microtime(true) - $mulai, 'Poin baru harus tampil paling lama 2 detik.');
         });
 
