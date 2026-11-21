@@ -159,19 +159,26 @@ class Hafidz_PBI08_PBI11_KasusEksepsiProposalTest extends FiturTestCase
         });
     }
 
-    /**
-     * PBI-11 Eksepsi: klaim pada challenge yang baru dinonaktifkan ditolak.
-     * Catatan: proposal menyebut pesan "Challenge ini sudah tidak aktif"; aplikasi memberi halaman 404.
-     */
+    /** PBI-11 Eksepsi: klaim pada challenge yang baru dinonaktifkan ditolak dengan alasan "Challenge ini sudah tidak aktif". */
     public function test_pbi11_eksepsi_klaim_pada_challenge_nonaktif_ditolak(): void
     {
         $mahasiswa = $this->mahasiswa();
-        $challenge = $this->challenge(null, ['title' => 'Sudah Nonaktif', 'is_active' => false]);
+        $challenge = $this->challenge(null, ['title' => 'Segera Nonaktif']);
 
         $this->browse(function (Browser $browser) use ($mahasiswa, $challenge) {
             $this->masuk($browser, $mahasiswa);
-            $browser->waitForLocation('/dashboard')->visit('/challenges/'.$challenge->id.'/claims')->assertSee('404');
+            $browser->waitForLocation('/dashboard')->visit('/challenges/'.$challenge->id.'/claims')
+                ->waitForText('Kirim bukti')
+                ->attach('photo', $this->fotoPng(61));
+            $this->jeda($browser, 800);
+
+            // Admin menonaktifkan challenge saat formulir masih terbuka, lalu mahasiswa menekan Kirim.
+            $challenge->update(['is_active' => false]);
+            $browser->press('Kirim bukti')->waitForText('Challenge ini sudah tidak aktif.');
             $this->jeda($browser, 1000);
         });
+
+        $this->assertSame(0, \App\Models\Claim::count());
+        $this->assertSame(0, (int) $mahasiswa->fresh()->total_points);
     }
 }

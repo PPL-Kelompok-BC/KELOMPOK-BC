@@ -25,23 +25,25 @@ class ClaimController extends Controller
         private readonly ClaimService $claims,
     ) {}
 
-    /** PBI-15: formulir unggah bukti foto. */
+    /** PBI-15: formulir unggah bukti foto. Challenge nonaktif menampilkan alasan, bukan 404 (PBI-11). */
     public function create(Challenge $challenge): View
     {
-        abort_unless($challenge->is_active, 404);
-
         return view('claims.create', compact('challenge'));
     }
 
     /** PBI-15/PBI-16: simpan klaim baru dengan verifikasi berlapis. */
     public function store(StoreClaimRequest $request, Challenge $challenge): RedirectResponse
     {
-        abort_unless($challenge->is_active, 404);
-
         $user = $request->user();
 
+        // Proposal Tabel 2.3 butir (a) dan PBI-11 eksepsi.
+        if (! $challenge->is_active) {
+            return back()->withErrors(['photo' => 'Challenge ini sudah tidak aktif.']);
+        }
+
+        // Proposal Tabel 2.3 butir (c): satu klaim per challenge per hari (WIB).
         if ($this->alreadyClaimedToday($user, $challenge)) {
-            return back()->withErrors(['photo' => 'Anda sudah mengirim bukti untuk challenge ini hari ini.']);
+            return back()->withErrors(['photo' => 'Kamu sudah mengklaim challenge ini hari ini.']);
         }
 
         try {
@@ -139,10 +141,10 @@ class ClaimController extends Controller
             ->with('status', "Bukti baru diterima. +{$claim->points_awarded} poin ditambahkan.");
     }
 
-    /** PBI-17: streaming foto privat (hanya pemilik atau admin). */
+    /** PBI-17: streaming foto privat (hanya pemilik atau admin); mahasiswa lain menerima 403. */
     public function photo(Request $request, Claim $claim): StreamedResponse
     {
-        $this->authorizeView($claim, $request->user());
+        $this->authorizeView($claim, $request->user(), 403);
 
         $path = $claim->proof_path;
         $disk = Storage::disk(ClaimPhotoService::DISK);
@@ -152,11 +154,11 @@ class ClaimController extends Controller
         return $disk->response($path);
     }
 
-    private function authorizeView(Claim $claim, ?User $user): void
+    private function authorizeView(Claim $claim, ?User $user, int $status = 404): void
     {
         abort_unless(
             $user && ($claim->user_id === $user->id || $user->role === User::ROLE_ADMIN),
-            404
+            $status
         );
     }
 
@@ -165,7 +167,9 @@ class ClaimController extends Controller
     {
         return Claim::where('user_id', $user->id)
             ->where('challenge_id', $challenge->id)
-            ->where('claim_date', today()->toDateString())
+            // whereDate: SQLite menyimpan kolom date sebagai "Y-m-d 00:00:00", jadi perbandingan
+            // string biasa tidak pernah cocok dan klaim kedua baru tertahan unique index (error 500).
+            ->whereDate('claim_date', today()->toDateString())
             ->exists();
     }
 }

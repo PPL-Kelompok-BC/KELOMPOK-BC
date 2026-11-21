@@ -68,6 +68,28 @@ class Alexander_PBI15_PBI18_KasusEksepsiProposalTest extends FiturTestCase
         });
     }
 
+    /** Proposal Tabel 2.3 butir (e): foto dengan tanggal EXIF bukan hari ini ditolak dan poin tidak bertambah. */
+    public function test_pbi16_eksepsi_foto_dengan_exif_kemarin_ditolak(): void
+    {
+        if (! function_exists('imagecreatetruecolor')) {
+            $this->markTestSkipped('Ekstensi GD belum aktif; JPEG uji dibuat dengan GD.');
+        }
+        $user = $this->mahasiswa();
+        $challenge = $this->challenge();
+
+        $this->browse(function (Browser $browser) use ($user, $challenge) {
+            $this->masuk($browser, $user);
+            $browser->waitForLocation('/dashboard')->visit('/challenges/'.$challenge->id.'/claims')
+                ->attach('photo', $this->fotoJpeg(46, now()->subDay()->format('Y-m-d H:i:s')));
+            $this->jeda($browser, 600);
+            $browser->press('Kirim bukti')->waitForText('Tanggal pengambilan foto bukan hari ini');
+            $this->jeda($browser, 1200);
+        });
+
+        $this->assertSame(0, Claim::count());
+        $this->assertSame(0, (int) $user->fresh()->total_points);
+    }
+
     /** PBI-16 Normal: foto baru dengan tanggal EXIF hari ini diterima dan waktu pengambilannya terbaca. */
     public function test_pbi16_normal_foto_dengan_exif_hari_ini_diterima(): void
     {
@@ -136,8 +158,7 @@ class Alexander_PBI15_PBI18_KasusEksepsiProposalTest extends FiturTestCase
     }
 
     /**
-     * PBI-17 Eksepsi: mahasiswa lain yang membuka URL foto tidak bisa melihatnya.
-     * Catatan: proposal menyebut respons 403; aplikasi memberi 404 agar keberadaan klaim tidak bocor.
+     * PBI-17 Eksepsi: mahasiswa lain yang membuka URL foto menerima respons 403 (sesuai proposal).
      */
     public function test_pbi17_eksepsi_mahasiswa_lain_tidak_bisa_membuka_url_foto(): void
     {
@@ -156,7 +177,7 @@ class Alexander_PBI15_PBI18_KasusEksepsiProposalTest extends FiturTestCase
             $this->masuk($browser, $intip);
             $browser->waitForLocation('/dashboard')->visit('/claims/'.$klaimId.'/photo');
             $this->jeda($browser, 800);
-            $browser->assertSee('404');
+            $browser->assertSee('403');
         });
     }
 }

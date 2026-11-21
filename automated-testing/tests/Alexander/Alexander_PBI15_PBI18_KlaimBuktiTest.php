@@ -38,14 +38,6 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 
     public function test_klaim_kedua_untuk_challenge_yang_sama_di_hari_yang_sama_ditolak(): void
     {
-        if (config('database.default') === 'sqlite') {
-            // Temuan: ClaimController::alreadyClaimedToday membandingkan claim_date dengan '2026-11-16',
-            // tetapi SQLite menyimpan '2026-11-16 00:00:00' sehingga pengecekan meleset dan terjadi
-            // UniqueConstraintViolation (500). Di MySQL (produksi) kolom DATE tidak bermasalah.
-            // Perbaikan: whereDate('claim_date', ...). Jalankan tes ini dengan DB_CONNECTION=mysql.
-            $this->markTestSkipped('Cek satu-klaim-per-hari belum kompatibel dengan SQLite (lihat komentar).');
-        }
-
         $user = $this->mahasiswa();
         $challenge = $this->challenge();
 
@@ -60,11 +52,12 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 
             $browser->visit('/challenges/'.$challenge->id.'/claims')
                 ->attach('photo', $this->fotoPng(3))->press('Kirim bukti')
-                ->waitForText('Anda sudah mengirim bukti untuk challenge ini hari ini.');
+                ->waitForText('Kamu sudah mengklaim challenge ini hari ini.');  // proposal Tabel 2.3 butir (c)
             $this->jeda($browser, 1500);
         });
 
         $this->assertSame(1, Claim::where('user_id', $user->id)->count());
+        $this->assertSame($challenge->points, $user->fresh()->total_points, 'Poin hanya bertambah satu kali.');
     }
 
     public function test_foto_yang_sama_tidak_bisa_dipakai_dua_kali(): void
@@ -84,8 +77,8 @@ class Alexander_PBI15_PBI18_KlaimBuktiTest extends FiturTestCase
 
             $browser->visit('/challenges/'.$b->id.'/claims')
                 ->attach('photo', $this->fotoPng(4))->press('Kirim bukti')
-                ->waitForText('Foto ini sudah pernah dipakai. Gunakan foto lain.')
-                ->assertSee('Foto ini sudah pernah dipakai. Gunakan foto lain.');
+                ->waitForText('Foto ini sudah pernah dipakai untuk klaim lain.')
+                ->assertSee('Foto ini sudah pernah dipakai untuk klaim lain.');
             $this->jeda($browser, 1500);
         });
     }

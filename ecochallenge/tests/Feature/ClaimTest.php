@@ -128,9 +128,30 @@ class ClaimTest extends TestCase
             ->post(route('claims.store', $challenge), [
                 'photo' => UploadedFile::fake()->image('bukti-lain.jpg', 320, 240),
             ])
-            ->assertSessionHasErrors('photo');
+            ->assertSessionHasErrors(['photo' => 'Kamu sudah mengklaim challenge ini hari ini.']);
 
         $this->assertSame(1, Claim::count());
+        $this->assertSame($challenge->points, $user->fresh()->total_points, 'Poin hanya bertambah satu kali.');
+    }
+
+    /** PBI-11 eksepsi / Tabel 2.3 butir (a): klaim pada challenge nonaktif ditolak dengan alasan. */
+    public function test_klaim_pada_challenge_nonaktif_ditolak_dengan_alasan(): void
+    {
+        $user = $this->mahasiswa();
+        $challenge = $this->challenge(['is_active' => false]);
+
+        $this->actingAs($user)->get(route('claims.create', $challenge))
+            ->assertOk()
+            ->assertSee('Challenge ini sudah tidak aktif.')
+            ->assertDontSee(route('claims.store', $challenge), false);
+
+        $this->actingAs($user)
+            ->from(route('claims.create', $challenge))
+            ->post(route('claims.store', $challenge), ['photo' => UploadedFile::fake()->image('bukti.jpg', 320, 240)])
+            ->assertSessionHasErrors(['photo' => 'Challenge ini sudah tidak aktif.']);
+
+        $this->assertSame(0, Claim::count());
+        $this->assertSame(0, (int) $user->fresh()->total_points);
     }
 
     /** PBI-16: foto ber-hash sama ditolak walau challenge berbeda. */
@@ -149,7 +170,7 @@ class ClaimTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('claims.store', $challengeB), ['photo' => $upload])
-            ->assertSessionHasErrors('photo');
+            ->assertSessionHasErrors(['photo' => 'Foto ini sudah pernah dipakai untuk klaim lain.']);
 
         $this->assertSame(1, Claim::count());
     }
@@ -168,9 +189,10 @@ class ClaimTest extends TestCase
             ->get(route('claims.photo', $claim))
             ->assertOk();
 
+        // PBI-17 eksepsi: mahasiswa lain menerima respons 403.
         $this->actingAs($this->mahasiswa())
             ->get(route('claims.photo', $claim))
-            ->assertNotFound();
+            ->assertForbidden();
 
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 

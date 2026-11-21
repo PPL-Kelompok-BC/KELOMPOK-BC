@@ -3,7 +3,7 @@
 @section('title', 'Kirim Bukti')
 
 @section('content')
-    <a href="{{ route('challenges.show', $challenge) }}" class="text-sm text-green-800 hover:underline">← Kembali ke challenge</a>
+    <a href="{{ $challenge->is_active ? route('challenges.show', $challenge) : route('challenges.index') }}" class="text-sm text-green-800 hover:underline">← {{ $challenge->is_active ? 'Kembali ke challenge' : 'Kembali ke katalog' }}</a>
 
     <article class="mt-4 bg-white rounded-2xl border border-green-100 shadow-sm p-6 sm:p-8">
         <h1 class="eco-h1">Kirim bukti</h1>
@@ -24,6 +24,12 @@
             </div>
         @endif
 
+        {{-- PBI-11 eksepsi / proposal Tabel 2.3 butir (a): klaim pada challenge nonaktif ditolak. --}}
+        @if (! $challenge->is_active)
+            @unless ($errors->any())
+                <div role="alert" class="mt-6 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">Challenge ini sudah tidak aktif.</div>
+            @endunless
+        @else
         <form method="POST" action="{{ route('claims.store', $challenge) }}" enctype="multipart/form-data" class="mt-6 space-y-5">
             @csrf
 
@@ -45,5 +51,6 @@
                 Kirim bukti
             </button>
         </form>
+        @endif
     </article>
 @endsection

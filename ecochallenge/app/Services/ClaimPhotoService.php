@@ -24,8 +24,16 @@ class ClaimPhotoService
         $bytes = $file->get();
         $hash = hash('sha256', $bytes);
 
+        // Proposal Tabel 2.3 butir (d): hash SHA-256 belum pernah dipakai pada klaim mana pun.
         if (Claim::where('photo_hash', $hash)->exists()) {
-            throw new InvalidClaimPhotoException('Foto ini sudah pernah dipakai. Gunakan foto lain.');
+            throw new InvalidClaimPhotoException('Foto ini sudah pernah dipakai untuk klaim lain.');
+        }
+
+        // Proposal Tabel 2.3 butir (e): bila ada tanggal EXIF, harus hari yang sama (WIB).
+        // Foto tanpa EXIF tetap diterima dan diberi tanda prioritas tinjau oleh ClaimService.
+        $takenAt = $this->takenAt($file->getRealPath());
+        if ($takenAt !== null && substr($takenAt, 0, 10) !== today()->toDateString()) {
+            throw new InvalidClaimPhotoException('Tanggal pengambilan foto bukan hari ini. Gunakan foto yang diambil hari ini.');
         }
 
         $path = self::DIRECTORY.'/'.$userId.'/'.Str::uuid().'.'.$this->extension($file);
@@ -37,7 +45,7 @@ class ClaimPhotoService
         return [
             'path' => $path,
             'hash' => $hash,
-            'taken_at' => $this->takenAt($file->getRealPath()),
+            'taken_at' => $takenAt,
         ];
     }
 
