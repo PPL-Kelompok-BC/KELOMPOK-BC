@@ -12,7 +12,7 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 | PBI | Test case / kriteria | Tes | Status |
 |---|---|---|---|
 | PBI-03 | TC-01 registrasi valid → dashboard, kata sandi ter-hash | `test_registrasi_berhasil_lalu_masuk_ke_dashboard_mahasiswa`, `test_pbi03_tc01_akun_tersimpan_dengan_kata_sandi_ter_hash_dan_streak_awal_nol` | ✅ |
-| PBI-03 | TC-01 streak awal bernilai 0 | `test_pbi03_tc01_baris_streak_awal_nol_dibuat_saat_registrasi` | ⏭ Temuan 1 |
+| PBI-03 | TC-01 streak awal bernilai 0 | `test_pbi03_tc01_baris_streak_awal_nol_dibuat_saat_registrasi` | ✅ (Temuan 1 sudah diperbaiki) |
 | PBI-03 | TC-02 email dipakai, TC-03 username dipakai | `test_username_dan_email_yang_sudah_dipakai_ditolak` | ✅ |
 | PBI-03 | TC-04 kata sandi 5 karakter / konfirmasi beda | `test_pbi03_tc04_*` (2 tes) | ✅ |
 | PBI-04 | TC-05, TC-06 login mahasiswa dan admin | `test_mahasiswa_masuk_ke_dashboard_mahasiswa`, `test_admin_masuk_ke_dashboard_admin` | ✅ |
@@ -99,13 +99,13 @@ Keterangan status: ✅ ada tesnya dan lulus · ⏭ dilewati karena temuan atau p
 ## Temuan (perbedaan aplikasi dengan Jira atau proposal)
 
 Tes ditulis mengikuti perilaku aplikasi yang berjalan; perbedaan di bawah ini dicatat agar tim bisa
-memutuskan apakah aplikasi atau dokumennya yang disesuaikan. Tidak ada kode aplikasi yang diubah.
+memutuskan apakah aplikasi atau dokumennya yang disesuaikan. Temuan yang sudah diperbaiki ditandai beserta nomor PR-nya.
 
-1. **Streak awal (Jira PBI-03 TC-01):** registrasi belum membuat baris `streaks` bernilai 0. Tabel
-   `streaks` ada tetapi kosong; fitur streak baru dikerjakan di PBI-26.
-2. **Pesan akun nonaktif (Jira PBI-04 TC-09):** Jira: "Akun Anda dinonaktifkan, hubungi admin".
-   Aplikasi: "Akun ini dinonaktifkan. Hubungi admin."
-3. **Tanda tinjau (proposal PBI-16): SUDAH DIPERBAIKI.** Sesuai UC-06, klaim yang lolos verifikasi
+1. **Streak awal (Jira PBI-03 TC-01): SUDAH DIPERBAIKI (PR #29).** Registrasi kini membuat baris `streaks`
+   bernilai 0 dalam satu transaksi dengan akun, sesuai UC-01 langkah 5 di proposal.
+2. **Pesan akun nonaktif (Jira PBI-04 TC-09): SUDAH DIPERBAIKI (PR #29).** Aplikasi kini memakai pesan proposal
+   UC-02 alur 2c: "Akun Anda dinonaktifkan, hubungi admin".
+3. **Tanda tinjau (proposal PBI-16): SUDAH DIPERBAIKI (PR #28).** Sesuai UC-06, klaim yang lolos verifikasi
    langsung diterima dan poin bertambah saat itu juga; `needs_review` hanya `true` untuk foto tanpa EXIF
    (alur 5b).
 4. **Pesan foto kembar (proposal PBI-16):** proposal: "Foto ini sudah pernah dipakai untuk klaim
