@@ -12,7 +12,8 @@ class HomePageTest extends DuskTestCase
         $this->browse(function (Browser $browser) {
             $browser->visit('/')
                 ->assertTitleContains('EcoChallenge')
-                ->waitForText('Temukan challenge', 10);
+                ->waitForText('Temukan challenge', 10)
+                ->pause(3000);
         });
     }
 
@@ -21,7 +22,8 @@ class HomePageTest extends DuskTestCase
         $this->browse(function (Browser $browser) {
             $browser->visit('/halaman-tidak-ada')
                 ->assertTitleContains('404')
-                ->waitForText('Halaman yang kamu cari tidak ditemukan.', 10);
+                ->waitForText('Halaman yang kamu cari tidak ditemukan.', 10)
+                ->pause(3000);
         });
     }
 }

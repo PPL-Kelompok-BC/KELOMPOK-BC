@@ -13,7 +13,23 @@ class AdminCategoryBrowserTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
-    public function test_admin_melihat_nama_dan_jumlah_challenge_tiap_kategori(): void
+    private function loginViaForm(Browser $browser, string $email, string $password): Browser
+    {
+        $browser->logout();
+        $browser->driver->manage()->deleteAllCookies();
+
+        return $browser->visit('/login')
+            ->waitForText('Masuk.', 15)
+            ->pause(800)
+            ->type('email', $email)
+            ->pause(800)
+            ->type('password', $password)
+            ->pause(800)
+            ->press('Masuk');
+    }
+
+    /** PBI-05 Normal: Admin login lewat form, buka Kelola Kategori, melihat daftar & jumlah challenge. */
+    public function test_pbi05_admin_melihat_nama_dan_jumlah_challenge_tiap_kategori(): void
     {
         $admin = User::create([
             'name' => 'Admin EcoChallenge',
@@ -44,18 +60,24 @@ class AdminCategoryBrowserTest extends DuskTestCase
             'emission_source' => 'Estimasi kendaraan dihindari',
         ]);
 
-        $this->browse(function (Browser $browser) use ($admin) {
-            $browser->loginAs($admin)
-                ->visit('/admin/categories')
-                ->assertSee('Kelola kategori')
+        $this->browse(function (Browser $browser) {
+            $this->loginViaForm($browser, 'admin@ecochallenge.test', 'Admin123!')
+                ->waitForLocation('/admin', 15)
+                ->waitForText('DASHBOARD ADMIN', 15)
+                ->pause(1500)
+                ->clickLink('Kelola kategori')
+                ->waitForLocation('/admin/categories', 15)
+                ->waitForText('Kelola kategori', 15)
                 ->assertSee('Transportasi')
-                ->assertSee('1');
+                ->assertSee('1')
+                ->pause(3000);
         });
     }
 
-    public function test_mahasiswa_membuka_url_kelola_kategori_menerima_403(): void
+    /** PBI-05 Eksepsi: Mahasiswa login lewat form lalu mencoba buka /admin/categories ditolak 403. */
+    public function test_pbi05_mahasiswa_membuka_url_kelola_kategori_menerima_403(): void
     {
-        $mahasiswa = User::create([
+        User::create([
             'name' => 'Mahasiswa Uji',
             'username' => 'mahasiswa.uji',
             'email' => 'mahasiswa@ecochallenge.test',
@@ -65,16 +87,20 @@ class AdminCategoryBrowserTest extends DuskTestCase
             'total_points' => 0,
         ]);
 
-        $this->browse(function (Browser $browser) use ($mahasiswa) {
-            $browser->loginAs($mahasiswa)
+        $this->browse(function (Browser $browser) {
+            $this->loginViaForm($browser, 'mahasiswa@ecochallenge.test', 'Mahasiswa123!')
+                ->waitForLocation('/dashboard', 15)
+                ->pause(1200)
                 ->visit('/admin/categories')
-                ->assertSee('403');
+                ->assertSee('403')
+                ->pause(3000);
         });
     }
 
-    public function test_admin_dapat_menambah_kategori_baru_dan_melihat_validasi(): void
+    /** PBI-06 Normal & Eksepsi: Validasi kosong/duplikat serta tambah kategori baru. */
+    public function test_pbi06_admin_dapat_menambah_kategori_baru_dan_melihat_validasi(): void
     {
-        $admin = User::create([
+        User::create([
             'name' => 'Admin EcoChallenge',
             'username' => 'admin',
             'email' => 'admin@ecochallenge.test',
@@ -84,23 +110,33 @@ class AdminCategoryBrowserTest extends DuskTestCase
             'total_points' => 0,
         ]);
 
-        $this->browse(function (Browser $browser) use ($admin) {
-            $browser->loginAs($admin)
-                ->visit('/admin/categories')
+        $this->browse(function (Browser $browser) {
+            $this->loginViaForm($browser, 'admin@ecochallenge.test', 'Admin123!')
+                ->waitForLocation('/admin', 15)
+                ->pause(1000)
+                ->clickLink('Kelola kategori')
+                ->waitForLocation('/admin/categories', 15)
+                ->pause(1200)
                 ->press('+ Tambah Kategori')
                 ->assertSee('Nama kategori wajib diisi.')
+                ->pause(2000)
                 ->type('name', 'Konservasi Air')
                 ->type('description', 'Aktivitas menghemat air')
+                ->pause(1200)
                 ->press('+ Tambah Kategori')
                 ->assertSee('Kategori baru berhasil ditambahkan.')
                 ->assertSee('Konservasi Air')
+                ->pause(2000)
                 ->type('name', 'Konservasi Air')
+                ->pause(1200)
                 ->press('+ Tambah Kategori')
-                ->assertSee('Nama kategori sudah terdaftar.');
+                ->assertSee('Nama kategori sudah terdaftar.')
+                ->pause(3000);
         });
     }
 
-    public function test_admin_dapat_mengubah_dan_menghapus_kategori_yang_belum_dipakai(): void
+    /** PBI-07 Normal & Eksepsi: Proteksi hapus kategori ber-challenge, ubah lewat modal, dan hapus kategori kosong. */
+    public function test_pbi07_admin_dapat_mengubah_dan_menghapus_kategori_yang_belum_dipakai(): void
     {
         $admin = User::create([
             'name' => 'Admin EcoChallenge',
@@ -137,24 +173,33 @@ class AdminCategoryBrowserTest extends DuskTestCase
             'is_active' => true,
         ]);
 
-        $this->browse(function (Browser $browser) use ($admin, $kategoriKosong) {
-            $browser->loginAs($admin)
-                ->visit('/admin/categories')
+        $this->browse(function (Browser $browser) use ($kategoriKosong) {
+            $this->loginViaForm($browser, 'admin@ecochallenge.test', 'Admin123!')
+                ->waitForLocation('/admin', 15)
+                ->pause(1000)
+                ->clickLink('Kelola kategori')
+                ->waitForLocation('/admin/categories', 15)
                 ->assertPresent('button[disabled]')
+                ->pause(2000)
                 ->click('button[data-id="' . $kategoriKosong->id . '"]')
                 ->whenAvailable('#editCategoryModal', function (Browser $modal) {
-                    $modal->clear('#edit_name')
+                    $modal->pause(1200)
+                        ->clear('#edit_name')
                         ->type('#edit_name', 'Kategori Baru')
                         ->clear('#edit_description')
                         ->type('#edit_description', 'Deskripsi diperbarui')
+                        ->pause(1200)
                         ->press('Simpan Perubahan');
                 })
-                ->waitForText('Kategori berhasil diperbarui.')
+                ->waitForText('Kategori berhasil diperbarui.', 15)
                 ->assertSee('Kategori Baru')
+                ->pause(2000)
                 ->click('form[action$="/admin/categories/' . $kategoriKosong->id . '"] button[type="submit"]')
+                ->pause(1000)
                 ->acceptDialog()
-                ->waitForText('Kategori berhasil dihapus.')
-                ->assertDontSee('Kategori Baru');
+                ->waitForText('Kategori berhasil dihapus.', 15)
+                ->assertDontSee('Kategori Baru')
+                ->pause(3000);
         });
     }
 }
